@@ -4,7 +4,7 @@
 
 **Quita el teclado y tu Surface se convierte en una tableta Android. Pon el teclado y vuelves a Windows.**
 
-Surface Dual ejecuta Android 17 con Google Play en una máquina virtual de Hyper-V en equipos Windows 11 con Snapdragon X.
+Surface Dual ejecuta Android 17 con Google Play en una máquina virtual de Hyper-V en equipos Windows 11 con chip Snapdragon X (solo ARM64).
 Android usa de verdad la gráfica y el chip de vídeo del equipo, y en pausa sus procesadores quedan parados (0 % de CPU, medido).
 
 > **Proyecto experimental.** Solo se ha probado en una Surface Pro 11 (Snapdragon X Elite), y el instalador todavía no se ha
@@ -38,7 +38,8 @@ En esta prueba de lectura, Android gastó **un 38 % menos** que Edge en Windows.
 
 ## Requisitos
 
-- Equipo con **Snapdragon X** (gráfica Adreno) y **Windows 11**. Solo se ha probado en una Surface Pro 11.
+- Equipo **ARM64 con chip Qualcomm Snapdragon X** (gráfica Adreno) y **Windows 11**. Solo se ha probado en una Surface Pro 11.
+  **No funciona en PCs con Intel o AMD (x86/x64):** el instalador lo comprueba primero y se detiene sin cambiar nada.
 - **16 GB de RAM** (Android usa 8 GB mientras está encendido) y **64 GB libres** en disco.
 - Una cuenta de **administrador** de Windows e Internet: se descargan unos 2,2 GB de Android, más Ubuntu y herramientas.
 - Hyper-V. En Windows 11 **Home** el instalador lo activa de forma **experimental**, y solo si escribes `SI` para confirmarlo.
