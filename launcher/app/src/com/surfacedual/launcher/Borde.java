@@ -250,11 +250,11 @@ class Borde {
             @Override public boolean onTouchEvent(MotionEvent e) { if (e.getActionMasked() == MotionEvent.ACTION_UP) cerrarPanel(); return true; }
         };
         raiz.setFocusableInTouchMode(true);
-        // Alto fijo, proporcional a la pantalla en cada orientación (como One UI, cuyo panel no encoge con pocas apps); caben
-        // tantas filas como permita ese alto y solo después se pasa a 2 o más columnas (18/11: era una columna chica de 100 dp).
+        // Del alto de sus apps (pedido 19/11: con 4 apps, de 4, sin hueco abajo) hasta el 84 % de la pantalla; caben tantas
+        // filas como permita ese tope y solo después se pasa a 2 o más columnas.
         List<String> apps = elegidas();
         int[] pant = p.pantalla();
-        int alto = Math.round(pant[1] * .84f), resto = p.dp(14 + 52 + 8), ancho = p.dp(ANCHO_CELDA);
+        int tope = Math.round(pant[1] * .84f), resto = p.dp(14 + 52 + 8), ancho = p.dp(ANCHO_CELDA);
         List<LinearLayout> celdas = new ArrayList<>();
         int altoCelda = 1;
         for (String pkg : apps) {
@@ -264,11 +264,13 @@ class Borde {
             altoCelda = Math.max(altoCelda, b.getMeasuredHeight());
             celdas.add(b);
         }
-        int cols = columnas(apps.size(), (alto - resto) / altoCelda);
+        int cols = columnas(apps.size(), (tope - resto) / altoCelda);
         // Por filas (8 apps con 7 de alto = 4 + 4, equilibrado). shortcut: sin tope de columnas; con más de ~80 apps se saldría por la izquierda.
         android.widget.GridLayout rejilla = new android.widget.GridLayout(ctx);
         rejilla.setColumnCount(cols);
         for (LinearLayout b : celdas) rejilla.addView(b, new ViewGroup.LayoutParams(ancho, ViewGroup.LayoutParams.WRAP_CONTENT));
+        rejilla.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);   // su alto real (nombres de una o dos líneas)
+        int alto = Math.min(tope, resto + rejilla.getMeasuredHeight());
         LinearLayout col = new LinearLayout(ctx);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);

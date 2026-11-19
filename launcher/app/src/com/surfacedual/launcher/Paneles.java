@@ -127,6 +127,7 @@ class Paneles {
         wm = ctx.getSystemService(WindowManager.class);
         Inicio.fuentes(c);
         assert paquetes("39:com.a.b,7:c.d").equals(Arrays.asList("com.a.b", "c.d")) && paquetes("").isEmpty() && paquetes(" ").isEmpty();
+        assert redDe("wifi 4d6920c3b1 80 gs")[0].equals("Mi ñ") && redDe("wifi 4d6 80 gs") == null && redDe("wifi 4d 80 xs") == null && redDe("wifi  80 gs") == null && redDe("wifi 4d 101 gs") == null;
     }
 
     // ---------- abrir y cerrar ----------
@@ -401,6 +402,9 @@ class Paneles {
         android.net.ConnectivityManager cm = ctx.getSystemService(android.net.ConnectivityManager.class);
         Interruptor w = new Interruptor("Wi-Fi", "ic_wifi_signal_4", true, false, (on, mal) -> agente("ajuste wifi " + (on ? "on" : "off"), mal));
         Interruptor bt = new Interruptor("Bluetooth", "ic_qs_bluetooth", true, false, (on, mal) -> agente("ajuste bt " + (on ? "on" : "off"), mal));
+        // Mantener pulsado: las redes de Windows (pedido 19/11), que es por donde sale Android. Al abrir, el nombre de la conectada.
+        w.vista.setOnLongClickListener(v -> { redesWifi(); return true; });
+        botonWifi = w;
         anchos.addView(w.vista, peso());
         anchos.addView(bt.vista, margen(dp(10), 0, 0, 0, 1));
         t.addView(anchos);
@@ -474,6 +478,7 @@ class Paneles {
             android.net.NetworkCapabilities nc = cm == null ? null : cm.getNetworkCapabilities(cm.getActiveNetwork());
             w.conectado = nc != null && nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED);
             w.poner(w.conectado || (wifi != null && wifi.isWifiEnabled()));
+            alVisor("wifi lista", false);
             Inicio.peticionAgente(ctx, "estado", r -> {   // los radios de Windows
                 bt.poner(r.contains("bt=on"));
                 if (r.contains("wifi=on") || r.contains("wifi=off")) w.poner(r.contains("wifi=on"));
@@ -549,6 +554,7 @@ class Paneles {
         final ImageView ic;
         TextView estado;
         boolean on, conectado;   // conectado: con Internet dice "Conectado" en vez de "Activado"
+        String red;              // Wi-Fi: el nombre de la red de Windows, si se sabe
 
         Interruptor(String nombre, String icono, boolean ancho, boolean inicial, Cambio cambio) {
             vista = new LinearLayout(ctx);
@@ -596,11 +602,107 @@ class Paneles {
             on = v;
             forma.setColor(on ? ACENTO : APAGADO);
             ic.setColorFilter(on ? 0xFF003049 : Color.WHITE);   // glifo oscuro sobre el acento, como Windows 11
-            if (estado != null) estado.setText(on ? (conectado ? "Conectado" : "Activado") : "Desactivado");
+            if (estado != null) estado.setText(on ? (red != null ? red : conectado ? "Conectado" : "Activado") : "Desactivado");
         }
     }
 
     void agente(String orden, Runnable mal) { Inicio.peticionAgente(ctx, orden, null, mal); }
+
+    // ---------- redes Wi-Fi de Windows (mantener pulsado el botón Wi-Fi) ----------
+    // Android sale a Internet por Windows (virt_wifi + NAT): elegir red es cambiar la de Windows. El visor da la lista por 4445
+    // y conecta las que Windows ya tiene guardadas; una nueva (con contraseña) se elige en el panel de redes de Windows: la
+    // contraseña nunca pasa por Android ni por el visor.
+
+    static final List<String[]> redes = new ArrayList<>(), redesNuevas = new ArrayList<>();   // { nombre, ssid hex, señal 0-100, banderas }
+    static boolean redesListas;   // Windows ya contestó (lista vacía = no ve redes, no "buscando")
+    Interruptor botonWifi;
+    AlertDialog dialogoWifi;
+    LinearLayout listaWifi;
+
+    /** Del visor por 4445: "wifi <ssid hex> <señal> <c|g|n><s|a>" por red (conectada/guardada/nueva, segura/abierta) entre "wifi inicio" y "wifi fin"; "wifi error" = no conectó. Validado: viene de la red. */
+    static void wifiDelVisor(Context c, String l) {
+        if (l.equals("wifi error")) { HILO.post(() -> { Toast.makeText(c, "No se pudo conectar", Toast.LENGTH_SHORT).show(); de(c).pintarWifi(); }); return; }
+        boolean fin = l.equals("wifi fin"), inicio = l.equals("wifi inicio");
+        String[] red = fin || inicio ? null : redDe(l);
+        if (!fin && !inicio && red == null) return;
+        HILO.post(() -> {
+            if (inicio) { redesNuevas.clear(); return; }   // una lista cortada a medias (visor reconectado) no se mezcla con esta
+            if (!fin) { if (redesNuevas.size() < 32) redesNuevas.add(red); return; }
+            redes.clear(); redes.addAll(redesNuevas); redesNuevas.clear(); redesListas = true;
+            Paneles yo = de(c);
+            if (yo.botonWifi != null) {
+                yo.botonWifi.red = null;
+                for (String[] r : redes) if (r[3].charAt(0) == 'c') yo.botonWifi.red = r[0];
+                yo.botonWifi.poner(yo.botonWifi.on);
+            }
+            yo.pintarWifi();
+        });
+    }
+
+    /** "wifi <ssid hex> <señal> <banderas>" -> { nombre, hex, señal, banderas }; null si la línea no es válida. */
+    static String[] redDe(String l) {
+        if (!l.matches("wifi ([0-9a-f]{2}){1,32} (100|[0-9]{1,2}) [cgn][sa]")) return null;
+        String[] p = l.split(" ");
+        byte[] b = new byte[p[1].length() / 2];
+        for (int i = 0; i < b.length; i++) b[i] = (byte) Integer.parseInt(p[1].substring(2 * i, 2 * i + 2), 16);
+        return new String[] { new String(b, java.nio.charset.StandardCharsets.UTF_8), p[1], p[2], p[3] };
+    }
+
+    /** Una línea al visor, fuera del hilo principal. avisar: si no hay visor, se dice. */
+    void alVisor(String l, boolean avisar) {
+        new Thread(() -> {
+            if (!AWindows.alVisor(l) && avisar) HILO.post(() -> Toast.makeText(ctx, "Windows no responde", Toast.LENGTH_SHORT).show());
+        }).start();
+    }
+
+    void redesWifi() {
+        if (dialogoWifi != null) dialogoWifi.dismiss();
+        LinearLayout lista = listaWifi = new LinearLayout(ctx);
+        lista.setOrientation(LinearLayout.VERTICAL);
+        lista.setPadding(dp(12), dp(8), dp(12), 0);
+        ScrollView sv = new ScrollView(ctx);
+        sv.addView(lista);
+        AlertDialog d = dialogoWifi = new AlertDialog.Builder(ctx).setTitle("Wi-Fi").setView(sv)
+                .setNeutralButton("Abrir redes de Windows", (x, w) -> alVisor("wifi panel", true))
+                .setPositiveButton("Cerrar", null).create();
+        d.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        d.setOnDismissListener(x -> { if (dialogoWifi == d) { dialogoWifi = null; listaWifi = null; } });
+        d.show();
+        pintarWifi();
+        alVisor("wifi buscar", true);   // lo que Windows ya sabe, al momento; y busca de nuevo
+        for (int ms : new int[] { 3500, 7000 }) HILO.postDelayed(() -> { if (dialogoWifi == d) alVisor("wifi lista", false); }, ms);   // lo encontrado en esa búsqueda (Windows tarda hasta ~4 s)
+    }
+
+    void pintarWifi() {
+        LinearLayout l = listaWifi;
+        if (l == null) return;
+        l.removeAllViews();
+        if (redes.isEmpty()) { l.addView(vacio(redesListas ? "Windows no ve redes Wi-Fi" : "Buscando redes…")); return; }
+        for (String[] r : redes) {
+            boolean con = r[3].charAt(0) == 'c', guardada = r[3].charAt(0) != 'n', segura = r[3].charAt(1) == 's';
+            LinearLayout f = fila();
+            f.setPadding(dp(12), dp(10), dp(12), dp(10));
+            f.setBackground(presionable(fondo(0, 0, 16)));
+            ImageView ic = new ImageView(ctx);
+            ic.setImageDrawable(icono("ic_wifi_signal_" + Math.min(4, Integer.parseInt(r[2]) / 20), con ? ACENTO : Color.WHITE));
+            f.addView(ic, new LinearLayout.LayoutParams(dp(26), dp(26)));
+            LinearLayout textos = new LinearLayout(ctx);
+            textos.setOrientation(LinearLayout.VERTICAL);
+            textos.addView(texto(r[0], 15, true, Color.WHITE));
+            TextView sub = texto(con ? "Conectada" : guardada ? "Guardada: toca para conectar" : segura ? "Con contraseña: se elige en Windows" : "Abierta: se elige en Windows", 12, false, con ? ACENTO : TEXTO2);
+            textos.addView(sub);
+            f.addView(textos, margen(dp(14), 0, 0, 0, 1));
+            f.setOnClickListener(v -> {
+                if (con) return;
+                if (!guardada) { alVisor("wifi panel", true); return; }
+                sub.setText("Conectando…");
+                alVisor("wifi conectar " + r[1], true);
+                // Windows tarda unos segundos en cambiar de red; también con la lista ya cerrada (el botón Wi-Fi dice el nombre)
+                for (int ms : new int[] { 3000, 8000 }) HILO.postDelayed(() -> alVisor("wifi lista", false), ms);
+            });
+            l.addView(f);
+        }
+    }
 
     View filaMedia(MediaController mc) {
         LinearLayout f = fila();
@@ -905,6 +1007,30 @@ class Paneles {
             else agente("traer " + pkg, null);
             cerrar();
         });
+        // Deslizar la tarjeta hacia arriba la cierra, como en Recientes de Android y One UI (pedido 19/11); corta, vuelve a su sitio.
+        c.setOnTouchListener(new View.OnTouchListener() {
+            float x0, y0; boolean tira;
+            @Override public boolean onTouch(View v, MotionEvent e) {
+                int ac = e.getActionMasked();
+                float dx = e.getRawX() - x0, dy = e.getRawY() - y0;   // de pantalla: la tarjeta se mueve con el dedo
+                if (ac == MotionEvent.ACTION_DOWN) { x0 = e.getRawX(); y0 = e.getRawY(); tira = false; return false; }
+                if (ac == MotionEvent.ACTION_MOVE) {
+                    if (!tira && dy < -ViewConfiguration.get(ctx).getScaledTouchSlop() && -dy > Math.abs(dx)) {
+                        tira = true;
+                        v.getParent().requestDisallowInterceptTouchEvent(true);   // el desplazable de lado no se la lleva
+                        v.setPressed(false); v.cancelLongPress();                 // ya no es un toque
+                    }
+                    if (tira) { v.setTranslationY(Math.min(0f, dy)); v.setAlpha(Math.max(.3f, 1f + dy / Math.max(1, v.getHeight()))); }
+                    return tira;
+                }
+                if (!tira || ac != MotionEvent.ACTION_UP && ac != MotionEvent.ACTION_CANCEL) return false;
+                tira = false;
+                // un tercio de su alto, o un gesto rápido y corto
+                if (ac == MotionEvent.ACTION_UP && (dy < -v.getHeight() / 3f || dy < -dp(30) && e.getEventTime() - e.getDownTime() < 250)) quitarTarea(pkg, v);
+                else v.animate().translationY(0f).alpha(1f).setDuration(160).setInterpolator(entrada);
+                return true;
+            }
+        });
         return c;
     }
 
@@ -912,7 +1038,7 @@ class Paneles {
         agente("cerrar " + pkg, null);
         miniaturas.remove(pkg);
         fechas.remove(pkg);
-        c.animate().alpha(0f).translationY(-dp(32)).scaleX(.92f).scaleY(.92f).setDuration(160).setInterpolator(salida).withLayer().withEndAction(() -> {
+        c.animate().alpha(0f).translationYBy(-dp(32)).scaleX(.92f).scaleY(.92f).setDuration(160).setInterpolator(salida).withLayer().withEndAction(() -> {
             List<String> resto = new ArrayList<>();
             for (String p : ultimasTareas.split(",")) if (!p.endsWith(":" + pkg) && !p.isEmpty()) resto.add(p);
             ultimasTareas = TextUtils.join(",", resto);

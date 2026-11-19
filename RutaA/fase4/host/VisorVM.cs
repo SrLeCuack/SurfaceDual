@@ -269,6 +269,7 @@ class VisorVM : Form
             if (id == dedoIsla) dedoIsla = -1;
             if (id == dedoBorde) dedoBorde = -1;
             if (id == dedoTiron && cortina != null) Cortina(muestraDy, true);   // la cortina a medias se abre o se cierra
+            else if (id == dedoTiron) { dedoTiron = -1; temporizadorTiron.Stop(); SoltarLinea(); }   // sin esto el gesto quedaba tomado y el siguiente toque dejaba un dedo fantasma en Android
             inicioDedo.Remove(id); ultimoDedo.Remove(id);
             if (dedos.TryGetValue(id, out r)) { EnviarToque(2u, r, Point.Empty); dedos.Remove(id); }
             else if (id == plumaId) { EnviarToque(4u, 0, Point.Empty, -1, 0); plumaId = -1; }   // solo la pluma: no cortar su trazo por otro puntero
@@ -576,7 +577,7 @@ class VisorVM : Form
     // engancha su EdgeBackGestureHandler (medido 16/11: mIsAttached=false), así que lo detecta el visor y manda KEY_BACK.
     int dedoBorde = -1; Point inicioBorde; bool bordeIzq;
     // Arriba y abajo (pedido 16/11, fotos de la Galaxy Tab): los paneles y la multitarea los dibuja nuestro launcher.
-    int dedoTiron = -1, movTiron, tInicioTiron; Point inicioTiron, ultimoTiron; bool tironArriba, lineaAvisada;
+    int dedoTiron = -1, movTiron, tInicioTiron; Point inicioTiron, ultimoTiron, anclaTiron; bool tironArriba, lineaAvisada;
     // Cortina: "tiron <noti|qs> <px bajados> [<px/s al soltar>]" al launcher (Paneles.tiron); sin la velocidad = sigue el dedo.
     string cortina; int muestraDy, velCortina; long tMuestra; bool cortinaEnviada;
     static long Ms() { return Stopwatch.GetTimestamp() * 1000 / Stopwatch.Frequency; }
@@ -605,11 +606,12 @@ class VisorVM : Form
             temporizadorTironCampo = new System.Windows.Forms.Timer { Interval = 20 };
             temporizadorTironCampo.Tick += (s, e) =>
             {
-                // subió más de 150 px y lleva 180 ms quieto: recientes (sus movimientos y el soltar ya no hacen nada)
+                // subió más de 150 px y lleva 130 ms casi quieto (menos de 30 px, ~230 px/s: la pausa de Pixel/One UI): recientes
+                // (sus movimientos y el soltar ya no hacen nada). 19/11: con 12 px en 180 ms el temblor del dedo real lo anulaba y al soltar salía el inicio.
                 if (dedoTiron == -1 || tironArriba) { temporizadorTironCampo.Stop(); SoltarLinea(); return; }
                 bool quieto = Math.Abs(ultimoTiron.X - inicioTiron.X) <= 24 && Math.Abs(ultimoTiron.Y - inicioTiron.Y) <= 24;
                 if (!quieto) SoltarLinea();   // se movió: ya no es mantener la línea
-                if (inicioTiron.Y - ultimoTiron.Y > 150 && Environment.TickCount - movTiron > 180)
+                if (inicioTiron.Y - ultimoTiron.Y > 150 && Environment.TickCount - movTiron > 130)
                 { dedoTiron = -1; temporizadorTironCampo.Stop(); ControlesCompartidos.Enviar("panel", "recientes"); }
                 // Mantener pulsada la línea de abajo: Circle to Search (como en Pixel/Galaxy; punto 18, 17/11). A los 120 ms quieto
                 // la línea empieza a crecer (respuesta inmediata, E13) y a los 350 ms se abre; un temblor de hasta 24 px no lo cancela.
@@ -676,7 +678,7 @@ class VisorVM : Form
         {
             int rx = p.X - d.X, ry = p.Y - d.Y;
             // Otro dedo mientras se sube desde abajo: es un gesto de varios dedos (dividir, recientes): el primero pasa a normal.
-            if (dedoTiron != -1 && !tironArriba) { int t = dedoTiron; dedoTiron = -1; Entregar(t, inicioTiron, ultimoTiron, false); }
+            if (dedoTiron != -1 && !tironArriba) { int t = dedoTiron; dedoTiron = -1; temporizadorTiron.Stop(); SoltarLinea(); Entregar(t, inicioTiron, ultimoTiron, false); }
             var isla = ControlesCompartidos.Isla;
             if (isla != null && dedos.Count == 0 && dedoIsla == -1 && ancho > 0 && alto > 0)
             {
@@ -689,7 +691,7 @@ class VisorVM : Form
             bool arriba = ry >= 0 && ry <= 24, abajo = ry >= d.Height - 48 && ry <= d.Height;   // abajo, 48 px: la línea es más grande (E13)
             if (dedos.Count == 0 && dedoTiron == -1 && (arriba || abajo))
             {
-                dedoTiron = id; inicioTiron = ultimoTiron = p; tironArriba = arriba; movTiron = tInicioTiron = Environment.TickCount; lineaAvisada = false;
+                dedoTiron = id; inicioTiron = ultimoTiron = anclaTiron = p; tironArriba = arriba; movTiron = tInicioTiron = Environment.TickCount; lineaAvisada = false;
                 if (!arriba) temporizadorTiron.Start();
                 return true;
             }
@@ -763,7 +765,8 @@ class VisorVM : Form
                 if (msg == UP || Math.Abs(dx) > 60) { dedoTiron = -1; Entregar(id, inicioTiron, p, msg == UP); }
                 return true;
             }
-            if (Math.Abs(p.X - ultimoTiron.X) + Math.Abs(p.Y - ultimoTiron.Y) > 12) { ultimoTiron = p; movTiron = Environment.TickCount; }
+            ultimoTiron = p;
+            if (Math.Abs(p.X - anclaTiron.X) + Math.Abs(p.Y - anclaTiron.Y) > 30) { anclaTiron = p; movTiron = Environment.TickCount; }
             if (msg == UP)   // subir y soltar = inicio; subir y mantener lo resuelve temporizadorTiron (recientes)
             {
                 dedoTiron = -1; temporizadorTiron.Stop(); SoltarLinea();
@@ -1067,6 +1070,7 @@ class VisorVM : Form
         if (l == "windows") { pedirMostrar.Reset(); pedirOcultar.Set(); }   // la última orden gana
         else if (l == "apagar") BeginInvoke((Action)Apagar);   // botón Apagar del launcher
         else if (l.StartsWith("media ")) MusicaCompartida.Linea(l);   // música de Android (Enlace.cs)
+        else if (l.StartsWith("wifi ")) WifiWindows.Linea(l, escribirLauncher);   // redes de Windows para el botón Wi-Fi (Enlace.cs)
         else Avisos.Linea(l);   // "avisos on|off", "alarma <ms>", "aviso ..." (Avisos.cs)
     }
 

@@ -44,8 +44,10 @@ public class AWindows extends TileService {
                             java.io.InputStream in = s.getInputStream();
                             StringBuilder l = new StringBuilder();
                             for (int b; (b = in.read()) >= 0; ) {
-                                if (b != '\n') { if (l.length() < 64) l.append((char) b); continue; }   // tope: lo que sobra se corta y no casa
-                                if (l.indexOf("tiron ") == 0) Paneles.delVisor(app, l.toString()); else IslaOyente.delVisor(l.toString());
+                                if (b != '\n') { if (l.length() < 96) l.append((char) b); continue; }   // tope: lo que sobra se corta y no casa ("wifi" con SSID de 32 bytes en hex: 78)
+                                if (l.indexOf("tiron ") == 0) Paneles.delVisor(app, l.toString());
+                                else if (l.indexOf("wifi ") == 0) Paneles.wifiDelVisor(app, l.toString());
+                                else IslaOyente.delVisor(l.toString());
                                 l.setLength(0);
                             }
                         } catch (Exception e) { }

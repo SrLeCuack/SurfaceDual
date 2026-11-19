@@ -758,3 +758,89 @@ static class MusicaCompartida
         catch (Exception e) { Trace.WriteLine("música: " + e.Message); }
     }
 }
+
+// Redes Wi-Fi de Windows para el launcher (mantener pulsado Wi-Fi en los ajustes rápidos; pedido 19/11). Android sale por
+// Windows, así que elegir red es cambiar la de Windows. Órdenes por 4445: "wifi lista", "wifi buscar" (lista + nueva búsqueda),
+// "wifi conectar <ssid hex>" (solo redes a la vista con perfil guardado en Windows) y "wifi panel" (el panel de redes de
+// Windows: ahí se escribe la contraseña de una red nueva; nunca pasa por aquí). Respuesta: "wifi inicio", "wifi <ssid hex> <señal 0-100>
+// <c|g|n><s|a>" por red (conectada/guardada/nueva, segura/abierta) y "wifi fin"; "wifi error" si no pudo pedir la conexión. API nativa de WLAN (wlanapi.dll):
+// learn.microsoft.com/windows/win32/api/wlanapi (WLAN_AVAILABLE_NETWORK = 628 bytes; desplazamientos de wlanapi.h).
+static class WifiWindows
+{
+    [DllImport("wlanapi.dll")] static extern int WlanOpenHandle(uint version, IntPtr r, out uint negociada, out IntPtr h);
+    [DllImport("wlanapi.dll")] static extern int WlanCloseHandle(IntPtr h, IntPtr r);
+    [DllImport("wlanapi.dll")] static extern int WlanEnumInterfaces(IntPtr h, IntPtr r, out IntPtr lista);
+    [DllImport("wlanapi.dll")] static extern int WlanGetAvailableNetworkList(IntPtr h, ref Guid interfaz, uint banderas, IntPtr r, out IntPtr lista);
+    [DllImport("wlanapi.dll")] static extern int WlanScan(IntPtr h, ref Guid interfaz, IntPtr ssid, IntPtr ie, IntPtr r);
+    [DllImport("wlanapi.dll")] static extern int WlanConnect(IntPtr h, ref Guid interfaz, ref Conexion c, IntPtr r);
+    [DllImport("wlanapi.dll")] static extern void WlanFreeMemory(IntPtr p);
+    [StructLayout(LayoutKind.Sequential)] struct Conexion { public int modo; [MarshalAs(UnmanagedType.LPWStr)] public string perfil; public IntPtr ssid, bssids; public int tipoBss, banderas; }
+    class Red { public string hex, perfil; public int calidad, tipoBss; public bool conectada, segura; }
+
+    static string Hex(byte[] b) { var s = new StringBuilder(); foreach (byte x in b) s.Append(x.ToString("x2")); return s.ToString(); }
+
+    // Redes a la vista del primer adaptador Wi-Fi, una por SSID (Windows repite la que tiene perfil): la conectada, las guardadas y el resto por señal.
+    static List<Red> Redes(IntPtr h, out Guid interfaz)
+    {
+        var redes = new Dictionary<string, Red>(); interfaz = Guid.Empty;
+        IntPtr li, lr;
+        if (WlanEnumInterfaces(h, IntPtr.Zero, out li) != 0) return new List<Red>();
+        try
+        {
+            if (Marshal.ReadInt32(li) < 1) return new List<Red>();
+            interfaz = (Guid)Marshal.PtrToStructure(li + 8, typeof(Guid));   // WLAN_INTERFACE_INFO_LIST: 2 DWORD y la primera interfaz
+        }
+        finally { WlanFreeMemory(li); }
+        if (WlanGetAvailableNetworkList(h, ref interfaz, 0, IntPtr.Zero, out lr) != 0) return new List<Red>();
+        try
+        {
+            int n = Marshal.ReadInt32(lr);
+            for (int i = 0; i < n && i < 256; i++)
+            {
+                IntPtr e = lr + 8 + i * 628;
+                int largo = Marshal.ReadInt32(e, 512), banderas = Marshal.ReadInt32(e, 620);   // DOT11_SSID.uSSIDLength, dwFlags (1 conectada, 2 con perfil)
+                if (largo < 1 || largo > 32) continue;   // red oculta
+                var ssid = new byte[largo]; Marshal.Copy(e + 516, ssid, 0, largo);
+                var r = new Red { hex = Hex(ssid), perfil = (banderas & 2) != 0 ? Marshal.PtrToStringUni(e) : null, calidad = Math.Max(0, Math.Min(100, Marshal.ReadInt32(e, 604))), tipoBss = Marshal.ReadInt32(e, 548),
+                                  conectada = (banderas & 1) != 0, segura = Marshal.ReadInt32(e, 608) != 0 };
+                Red v;
+                if (!redes.TryGetValue(r.hex, out v) || r.conectada && !v.conectada || r.perfil != null && v.perfil == null) redes[r.hex] = r;
+            }
+        }
+        finally { WlanFreeMemory(lr); }
+        var l = new List<Red>(redes.Values);
+        l.Sort((a, b) => a.conectada != b.conectada ? (a.conectada ? -1 : 1) : (a.perfil != null) != (b.perfil != null) ? (a.perfil != null ? -1 : 1) : b.calidad - a.calidad);
+        return l;
+    }
+
+    internal static void Linea(string l, Action<string> escribir)
+    {
+        if (l == "wifi panel") { try { Process.Start(new ProcessStartInfo("ms-availablenetworks:") { UseShellExecute = true }); } catch (Exception e) { Trace.WriteLine("wifi panel: " + e.Message); } return; }
+        bool conectar = l.StartsWith("wifi conectar ");
+        if (l != "wifi lista" && l != "wifi buscar" && !conectar) return;
+        uint v; IntPtr h = IntPtr.Zero;
+        try
+        {
+            if (!conectar && escribir != null) escribir("wifi inicio");   // lista nueva: el launcher tira una a medias
+            Guid g = Guid.Empty; var redes = WlanOpenHandle(2, IntPtr.Zero, out v, out h) == 0 ? Redes(h, out g) : new List<Red>();   // sin WLAN: lista vacía
+            if (conectar)
+            {
+                // Viene de Android: solo una red que Windows ve ahora y de la que ya guarda perfil (él pone la clave, no nosotros).
+                var r = redes.Find(x => x.hex == l.Substring(14) && x.perfil != null);
+                var c = new Conexion { modo = 0 /* wlan_connection_mode_profile */, perfil = r == null ? null : r.perfil, tipoBss = r == null ? 0 : r.tipoBss /* el del perfil: con otro, WlanConnect puede fallar */ };
+                int k = r == null ? -1 : WlanConnect(h, ref g, ref c, IntPtr.Zero);
+                if (k != 0 && escribir != null) escribir("wifi error");   // el launcher lo dice
+                return;
+            }
+            if (escribir != null)
+            {
+                for (int i = 0; i < redes.Count && i < 24; i++)
+                    escribir("wifi " + redes[i].hex + " " + redes[i].calidad + " " + (redes[i].conectada ? "c" : redes[i].perfil != null ? "g" : "n") + (redes[i].segura ? "s" : "a"));
+                escribir("wifi fin");
+            }
+            if (l == "wifi buscar" && g != Guid.Empty) WlanScan(h, ref g, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+        }
+        catch (Exception e) { Trace.WriteLine("wifi: " + e.Message); }   // launcher desconectado a media lista
+        finally { if (h != IntPtr.Zero) WlanCloseHandle(h, IntPtr.Zero); }
+    }
+}
