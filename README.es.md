@@ -60,9 +60,21 @@ donde se quedó.
 ## Límites conocidos
 
 - En Ajustes > Acerca de, el modelo aparece como `sdk_gphone64_arm64`: es la imagen oficial del emulador de Google.
-- YouTube llega como máximo a 1080p60. Netflix no funciona, porque el equipo no está certificado por Google.
+- YouTube llega como máximo a 1080p60. Netflix no funciona ([por qué](#por-qué-no-funciona-netflix)).
 - Las alarmas de Android no suenan mientras estás en Windows, porque Android está en pausa.
 - Con los gestos del trackpad, Android no se pone en pausa hasta que vuelves a él.
+
+### Por qué no funciona Netflix
+
+Netflix se abre y se cierra sola a los pocos segundos. Lo investigamos: al arrancar, la app de Netflix crea una clave de
+seguridad y comprueba quién la certifica. En un teléfono o tableta certificados esa clave sale de un chip de seguridad
+aprobado por Google; en Surface Dual la crea un programa dentro de la máquina virtual, así que Netflix decide en el propio
+equipo cerrarse. La comprobación de Google (Play Integrity) tampoco pasa, ni en su nivel básico: desde Android 13 ese nivel
+también exige claves certificadas por Google.
+
+Las únicas formas de saltarlo serían falsificar la identidad de otro equipo o usar claves filtradas. Este proyecto no lo
+hace ni lo hará. **Usa Netflix en Windows** (pon el teclado), donde funciona normal. Otras apps que exigen un equipo
+certificado por Google (algunas de bancos, por ejemplo) pueden no funcionar tampoco.
 
 ## Cómo funciona (resumen)
 

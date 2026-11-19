@@ -60,9 +60,21 @@ it left off.
 ## Known limitations
 
 - Settings > About shows the model as `sdk_gphone64_arm64`: it is Google's official emulator image.
-- YouTube goes up to 1080p60. Netflix does not work, because the device is not Google-certified.
+- YouTube goes up to 1080p60. Netflix does not work ([why](#why-netflix-does-not-work)).
 - Android alarms do not ring while you are in Windows, because Android is paused.
 - With the trackpad gestures, Android is not paused until you go back to it.
+
+### Why Netflix does not work
+
+Netflix opens and closes by itself a few seconds later. We traced it: when it starts, the Netflix app creates a security key
+and checks who certified it. On a certified phone or tablet that key comes from a security chip approved by Google; in
+Surface Dual it is created by software inside the virtual machine, so Netflix decides on the device itself to close.
+Google's own check (Play Integrity) also fails, not even at its basic level: since Android 13 that level also requires
+keys certified by Google.
+
+The only ways around it would be faking another device's identity or using leaked keys. This project does not do that and
+never will. **Use Netflix on Windows** (attach the keyboard), where it works normally. Other apps that require a
+Google-certified device (some banking apps, for example) may not work either.
 
 ## How it works (short version)
 
