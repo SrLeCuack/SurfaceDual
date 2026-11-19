@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- El framework vota 60 Hz por omisión (DisplayModeDirector, PRIORITY_DEFAULT_REFRESH_RATE) y el dibujado quedaba en
+         60 aunque la pantalla va a 120 (medido: renderRate=60). Sin daño, el composer no manda cuadros: el reposo no cambia. -->
+    <integer name="config_defaultRefreshRate">120</integer>
+    <integer name="config_defaultPeakRefreshRate">120</integer>
+    <!-- Circle to Search: el RRO autogenerado del emulador (product, prioridad 12) lo deja vacío y sin él no arranca el
+         servicio contextual_search (SystemServer). El de Pixel (PixelConfigOverlayCommon) ya pone las claves omni.*. -->
+    <string name="config_defaultContextualSearchPackageName">com.google.android.googlequicksearchbox</string>
+    <!-- "Boca abajo apaga la pantalla" leía el acelerómetro cada 200 ms (gasto continuo); el giro va por la orientación de Windows. -->
+    <bool name="config_flipToScreenOffEnabled">false</bool>
+</resources>

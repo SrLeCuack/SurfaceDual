@@ -1,0 +1,12 @@
+# Seccomp del Codec2 de SurfaceDual (arm64), además de android.hardware.media.c2-default-seccomp_policy del vendor.
+# Medido con RutaA/fase4/video/rastreo + vprueba (h264/hevc/vp9 por GPU y por software, 17/11): lo que la base no trae.
+# Mesa d3d12 / D3D12 (fences y colas)
+eventfd2: 1
+fcntl: 1
+# FFmpeg: hilos por software (av_cpu_count)
+sched_getaffinity: 1
+sched_getscheduler: 1
+# liblog (logd_writer): socket(AF_UNIX, SOCK_DGRAM|SOCK_NONBLOCK|SOCK_CLOEXEC) y connect a /dev/socket/logdw; main()
+# escribe un log antes de seccomp, así solo hace falta si logd se reinicia. connect no se puede filtrar por dirección.
+socket: arg0 == 1 && arg1 == 0x80802
+connect: 1

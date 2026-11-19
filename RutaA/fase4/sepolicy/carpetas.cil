@@ -1,0 +1,47 @@
+; Carpetas de Windows (RutaA/fase4/carpetas): sdcarpetas (root) escucha en vsock 5008, monta el 9P de HvCarpetas.exe en
+; /mnt/vendor/windows con la etiqueta de /data/media (context=) y lo enlaza en /data/media/0/{Movies,Pictures,...}.
+; Para que MediaStore indexe lo cambiado en Windows lanza "sh -c cmd activity broadcast" en el dominio shell (como adb).
+(type sdcarpetas)
+(roletype r sdcarpetas)
+(typeattributeset domain (sdcarpetas))
+(type sdcarpetas_exec)
+(roletype object_r sdcarpetas_exec)
+(typeattributeset file_type (sdcarpetas_exec))
+(typeattributeset exec_type (sdcarpetas_exec))
+(typeattributeset vendor_file_type (sdcarpetas_exec))
+(allow init_202604 sdcarpetas_exec (file (read getattr map execute open)))
+(allow init_202604 sdcarpetas (process (transition siginh rlimitinh noatsecure)))
+(allow sdcarpetas sdcarpetas_exec (file (read getattr map execute open entrypoint)))
+(allow sdcarpetas vendor_file_202604 (dir (search getattr)))
+(allow sdcarpetas init_202604 (fd (use)))
+(allow sdcarpetas kmsg_device_202604 (chr_file (write open getattr)))
+(allow sdcarpetas null_device_202604 (chr_file (read write open getattr)))
+(allow sdcarpetas self (vsock_socket (create bind listen accept read write getopt setopt getattr shutdown)))
+(allow sdcarpetas self (capability (sys_admin)))
+; El 9p del kernel (trans=fd) lee y escribe el socket desde sus kworker (dominio kernel; medido 17/11).
+(allow kernel_202604 sdcarpetas (fd (use)))
+(allow kernel_202604 sdcarpetas (vsock_socket (read write getattr)))
+(allow sdcarpetas device_202604 (dir (search)))
+; Montaje: 9p con context= (relabel del superbloque) y enlaces sobre /data/media/0/*.
+(allow sdcarpetas unlabeled_202604 (filesystem (relabelfrom)))
+(allow sdcarpetas media_rw_data_file_202604 (filesystem (mount unmount relabelfrom relabelto associate getattr)))
+; Con context= los archivos del 9p llevan la etiqueta del propio superbloque (medido 17/11: associate denegado).
+(allow media_rw_data_file_202604 media_rw_data_file_202604 (filesystem (associate)))
+; Superbloque labeledfs (fscontext=, como /data: MediaProvider ya puede hacer statfs) y archivos con el nivel MLS de
+; MediaProvider (context=...:s0:cN): sdcarpetas fija niveles que no son el suyo.
+(allow sdcarpetas labeledfs_202604 (filesystem (mount unmount relabelfrom relabelto getattr)))
+(typeattributeset mlstrustedsubject (sdcarpetas))
+(allow sdcarpetas media_rw_data_file_202604 (dir (search getattr open read mounton)))
+(allow sdcarpetas media_rw_data_file_202604 (file (getattr)))
+(allow sdcarpetas system_data_root_file_202604 (dir (search getattr)))
+(allow sdcarpetas media_userdir_file_202604 (dir (search getattr)))   ; /data/media (medido 17/11)
+(allow sdcarpetas tmpfs_202604 (dir (search getattr)))
+(allow sdcarpetas mnt_vendor_file_202604 (dir (search getattr write add_name create mounton)))
+; Escaneo de MediaStore por la shell.
+(typetransition sdcarpetas shell_exec_202604 process shell)
+(allow sdcarpetas shell_exec_202604 (file (read execute open getattr map)))
+(allow sdcarpetas system_file_202604 (dir (search getattr)))
+(allow sdcarpetas system_file_202604 (lnk_file (read getattr)))
+(allow sdcarpetas shell_202604 (process (transition noatsecure siginh rlimitinh)))
+(allow shell_202604 sdcarpetas (fd (use)))
+(allow shell_202604 sdcarpetas (process (sigchld)))

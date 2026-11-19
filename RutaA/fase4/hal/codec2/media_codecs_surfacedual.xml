@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Códecs por la GPU de la VM (hal/codec2): sustituye a media_codecs_google_video.xml del vendor (solo traía goldfish).
+     Rendimiento medido 17/11 con video/vprueba (solo decodificar, 300 cuadros): H.264 1080p 334-425 fps, 4K 140 fps;
+     HEVC 1080p 431, 4K 287; VP9 1080p 388, 4K 231. Los rangos de abajo dejan margen para el VPP (NV12 -> RGBA).
+     YouTube elige códec y resolución por performance-point: 4K a 60 en los tres. -->
+<Included>
+    <Decoders>
+        <MediaCodec name="c2.surfacedual.avc.decoder" type="video/avc">
+            <Limit name="size" min="16x16" max="4096x4096" />
+            <Limit name="alignment" value="2x2" />
+            <Limit name="block-size" value="16x16" />
+            <Limit name="blocks-per-second" range="1-3888000" />
+            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="frame-rate" range="1-240" />
+            <Limit name="performance-point-3840x2160" value="60" />
+            <Limit name="measured-frame-rate-1280x720" range="250-450" />
+            <Limit name="measured-frame-rate-1920x1080" range="200-330" />
+            <Limit name="measured-frame-rate-3840x2160" range="70-140" />
+            <Limit name="concurrent-instances" max="8" />
+            <Feature name="adaptive-playback" />
+        </MediaCodec>
+        <MediaCodec name="c2.surfacedual.hevc.decoder" type="video/hevc">
+            <Limit name="size" min="16x16" max="4096x4096" />
+            <Limit name="alignment" value="2x2" />
+            <Limit name="block-size" value="16x16" />
+            <Limit name="blocks-per-second" range="1-3888000" />
+            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="frame-rate" range="1-240" />
+            <Limit name="performance-point-3840x2160" value="60" />
+            <Limit name="measured-frame-rate-1280x720" range="250-450" />
+            <Limit name="measured-frame-rate-1920x1080" range="200-430" />
+            <Limit name="measured-frame-rate-3840x2160" range="100-280" />
+            <Limit name="concurrent-instances" max="8" />
+            <Feature name="adaptive-playback" />
+        </MediaCodec>
+        <MediaCodec name="c2.surfacedual.vp9.decoder" type="video/x-vnd.on2.vp9">
+            <Limit name="size" min="16x16" max="4096x4096" />
+            <Limit name="alignment" value="2x2" />
+            <Limit name="block-size" value="16x16" />
+            <Limit name="blocks-per-second" range="1-3888000" />
+            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="frame-rate" range="1-240" />
+            <Limit name="performance-point-3840x2160" value="60" />
+            <Limit name="measured-frame-rate-1280x720" range="250-450" />
+            <Limit name="measured-frame-rate-1920x1080" range="200-380" />
+            <Limit name="measured-frame-rate-3840x2160" range="90-230" />
+            <Limit name="concurrent-instances" max="8" />
+            <Feature name="adaptive-playback" />
+        </MediaCodec>
+    </Decoders>
+</Included>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Puente de Discover (como Lawnfeed): la app de Google solo abre su Discover para launchers de sistema o depurables. Esta app
+     mínima SÍ es depurable y solo reenvía las llamadas del launcher (que sigue compilado normal, sin perder velocidad). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.surfacedual.feed"
+    android:versionCode="1"
+    android:versionName="0.1">
+    <uses-sdk android:minSdkVersion="34" android:targetSdkVersion="36" />
+    <queries>
+        <package android:name="com.google.android.googlequicksearchbox" />
+    </queries>
+    <application android:label="Surface Dual Discover" android:hasCode="true" android:debuggable="true">
+        <!-- Solo el launcher (misma firma) puede enlazarse -->
+        <service android:name=".Puente"
+            android:exported="true"
+            android:permission="com.surfacedual.feed.ENLAZAR">
+            <intent-filter>
+                <action android:name="com.android.launcher3.WINDOW_OVERLAY" />
+                <data android:scheme="app" />
+            </intent-filter>
+        </service>
+    </application>
+    <permission android:name="com.surfacedual.feed.ENLAZAR" android:protectionLevel="signature" />
+</manifest>

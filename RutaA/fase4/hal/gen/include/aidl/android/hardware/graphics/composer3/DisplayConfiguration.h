@@ -1,0 +1,130 @@
+/*
+ * This file is auto-generated.  DO NOT MODIFY.
+ * Using: C:/SurfaceDual\\herramientas\\sdk\\build-tools\\android-37.0\\aidl.exe --lang=ndk --structured --stability=vintf --version=5 --hash=07c2ff93a65553c0f274ab0f688fd55f42402fac -I C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl -o gen/src -h gen/include C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ActiveConfigCommand.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\Buffer.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\Capability.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ChangedCompositionLayer.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ChangedCompositionTypes.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ClientTarget.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ClientTargetProperty.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ClientTargetPropertyWithBrightness.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ClockMonotonicTimestamp.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\Color.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ColorMode.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\CommandError.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\CommandResultPayload.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\Composition.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ContentType.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DimmingStage.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayAttribute.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayBrightness.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayCapability.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayCommand.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayConfiguration.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayConnectionType.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayContentSample.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayContentSamplingAttributes.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayIdentification.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayLuts.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\DisplayRequest.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\FormatColorComponent.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\HdrCapabilities.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\IComposer.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\IComposerCallback.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\IComposerClient.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\LayerBrightness.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\LayerCommand.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\LayerLifecycleBatchCommandType.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\LutProperties.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\Luts.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\OutputType.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\OverlayProperties.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ParcelableBlendMode.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ParcelableComposition.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ParcelableDataspace.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ParcelableTransform.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PerFrameMetadata.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PerFrameMetadataBlob.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PerFrameMetadataKey.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PlaneAlpha.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PowerMode.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PresentFence.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\PresentOrValidate.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ReadbackBufferAttributes.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\RefreshRateChangedDebugData.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ReleaseFences.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\RenderIntent.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ScreenPartStatus.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\VirtualDisplay.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\VrrConfig.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\VsyncPeriodChangeConstraints.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\VsyncPeriodChangeTimeline.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\VsyncSample.aidl C:/SurfaceDual\\RutaA\\fase4\\hal\\aidl\\android\\hardware\\graphics\\composer3\\ZOrder.aidl
+ *
+ * DO NOT CHECK THIS FILE INTO A CODE TREE (e.g. git, etc..).
+ * ALWAYS GENERATE THIS FILE FROM UPDATED AIDL COMPILER
+ * AS A BUILD INTERMEDIATE ONLY. THIS IS NOT SOURCE CODE.
+ */
+#pragma once
+
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+#include <android/binder_interface_utils.h>
+#include <android/binder_parcelable_utils.h>
+#include <android/binder_to_string.h>
+#include <aidl/android/hardware/graphics/composer3/DisplayConfiguration.h>
+#include <aidl/android/hardware/graphics/composer3/OutputType.h>
+#include <aidl/android/hardware/graphics/composer3/VrrConfig.h>
+#ifdef BINDER_STABILITY_SUPPORT
+#include <android/binder_stability.h>
+#endif  // BINDER_STABILITY_SUPPORT
+
+namespace aidl::android::hardware::graphics::composer3 {
+class VrrConfig;
+}  // namespace aidl::android::hardware::graphics::composer3
+namespace aidl {
+namespace android {
+namespace hardware {
+namespace graphics {
+namespace composer3 {
+class DisplayConfiguration {
+public:
+  typedef std::false_type fixed_size;
+  static const char* descriptor;
+
+  class Dpi {
+  public:
+    typedef std::false_type fixed_size;
+    static const char* descriptor;
+
+    float x = 0.000000f;
+    float y = 0.000000f;
+
+    binder_status_t readFromParcel(const AParcel* parcel);
+    binder_status_t writeToParcel(AParcel* parcel) const;
+
+    inline bool operator==(const Dpi& _rhs) const {
+      return std::tie(x, y) == std::tie(_rhs.x, _rhs.y);
+    }
+    inline bool operator<(const Dpi& _rhs) const {
+      return std::tie(x, y) < std::tie(_rhs.x, _rhs.y);
+    }
+    inline bool operator!=(const Dpi& _rhs) const {
+      return !(*this == _rhs);
+    }
+    inline bool operator>(const Dpi& _rhs) const {
+      return _rhs < *this;
+    }
+    inline bool operator>=(const Dpi& _rhs) const {
+      return !(*this < _rhs);
+    }
+    inline bool operator<=(const Dpi& _rhs) const {
+      return !(_rhs < *this);
+    }
+
+    static const ::ndk::parcelable_stability_t _aidl_stability = ::ndk::STABILITY_VINTF;
+    inline std::string toString() const {
+      std::ostringstream _aidl_os;
+      _aidl_os << "Dpi{";
+      _aidl_os << "x: " << ::android::internal::ToString(x);
+      _aidl_os << ", y: " << ::android::internal::ToString(y);
+      _aidl_os << "}";
+      return _aidl_os.str();
+    }
+  };
+  int32_t configId = 0;
+  int32_t width = 0;
+  int32_t height = 0;
+  std::optional<::aidl::android::hardware::graphics::composer3::DisplayConfiguration::Dpi> dpi;
+  int32_t configGroup = 0;
+  int32_t vsyncPeriod = 0;
+  std::optional<::aidl::android::hardware::graphics::composer3::VrrConfig> vrrConfig;
+  ::aidl::android::hardware::graphics::composer3::OutputType hdrOutputType = ::aidl::android::hardware::graphics::composer3::OutputType(0);
+
+  binder_status_t readFromParcel(const AParcel* parcel);
+  binder_status_t writeToParcel(AParcel* parcel) const;
+
+  inline bool operator==(const DisplayConfiguration& _rhs) const {
+    return std::tie(configId, width, height, dpi, configGroup, vsyncPeriod, vrrConfig, hdrOutputType) == std::tie(_rhs.configId, _rhs.width, _rhs.height, _rhs.dpi, _rhs.configGroup, _rhs.vsyncPeriod, _rhs.vrrConfig, _rhs.hdrOutputType);
+  }
+  inline bool operator<(const DisplayConfiguration& _rhs) const {
+    return std::tie(configId, width, height, dpi, configGroup, vsyncPeriod, vrrConfig, hdrOutputType) < std::tie(_rhs.configId, _rhs.width, _rhs.height, _rhs.dpi, _rhs.configGroup, _rhs.vsyncPeriod, _rhs.vrrConfig, _rhs.hdrOutputType);
+  }
+  inline bool operator!=(const DisplayConfiguration& _rhs) const {
+    return !(*this == _rhs);
+  }
+  inline bool operator>(const DisplayConfiguration& _rhs) const {
+    return _rhs < *this;
+  }
+  inline bool operator>=(const DisplayConfiguration& _rhs) const {
+    return !(*this < _rhs);
+  }
+  inline bool operator<=(const DisplayConfiguration& _rhs) const {
+    return !(_rhs < *this);
+  }
+
+  static const ::ndk::parcelable_stability_t _aidl_stability = ::ndk::STABILITY_VINTF;
+  inline std::string toString() const {
+    std::ostringstream _aidl_os;
+    _aidl_os << "DisplayConfiguration{";
+    _aidl_os << "configId: " << ::android::internal::ToString(configId);
+    _aidl_os << ", width: " << ::android::internal::ToString(width);
+    _aidl_os << ", height: " << ::android::internal::ToString(height);
+    _aidl_os << ", dpi: " << ::android::internal::ToString(dpi);
+    _aidl_os << ", configGroup: " << ::android::internal::ToString(configGroup);
+    _aidl_os << ", vsyncPeriod: " << ::android::internal::ToString(vsyncPeriod);
+    _aidl_os << ", vrrConfig: " << ::android::internal::ToString(vrrConfig);
+    _aidl_os << ", hdrOutputType: " << ::android::internal::ToString(hdrOutputType);
+    _aidl_os << "}";
+    return _aidl_os.str();
+  }
+};
+}  // namespace composer3
+}  // namespace graphics
+}  // namespace hardware
+}  // namespace android
+}  // namespace aidl

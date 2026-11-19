@@ -1,0 +1,164 @@
+; Reglas SELinux de SurfaceDual para la VM de Hyper-V (se añaden a vendor_sepolicy.cil; init compila la política al
+; arrancar porque se quita precompiled_sepolicy). Los tipos de la plataforma van con sufijo de versión (_202604).
+; Pruebas y canales con el host (hv_sock): la shell de adb puede abrir vsock.
+(allow shell_202604 self (vsock_socket (create connect bind listen accept read write getopt setopt getattr shutdown)))
+; Composer propio (RutaA/fase4/hal/composer): envía la pantalla al Visor por vsock 5001 (RutaA/fase4/pantalla_protocolo.md).
+(allow hal_graphics_composer_default self (vsock_socket (create bind listen accept read write getopt setopt getattr shutdown)))
+; Toque del Visor (entrada.cpp en el composer): crea una pantalla táctil por /dev/uinput (uhid_device).
+(allow hal_graphics_composer_default uhid_device_202604 (chr_file (open read write ioctl getattr)))
+; Audio de aloop: captura PCM por ioctls ALSA en el dominio del composer. Micrófono: escribe en pcmC0D1p, vigila con
+; inotify (watch y watch_reads, este por IN_CLOSE_NOWRITE) cuándo el HAL abre pcmC0D0c y lee en /proc/asound con qué formato graba.
+(allow hal_graphics_composer_default audio_device_202604 (chr_file (open read write ioctl getattr watch watch_reads)))
+(allow hal_graphics_composer_default audio_device_202604 (dir (search getattr open read)))
+(allow hal_graphics_composer_default proc_asound_202604 (file (open read getattr)))
+(allow hal_graphics_composer_default proc_asound_202604 (dir (search)))
+; Agente de sistema (surfacedual_agente, root): sincroniza controles y eventos con el host por TCP 4449. Sin DAC ni MLS (17/11):
+; solo lo medido con avc en un ejercicio completo (arranque, sesión del visor, paneles, Recientes, portapapeles, giro,
+; ubicación, ahorro, zona, batería/AOT, flotar/dividir, círculo) más lo que exige el código de F3/agente/Agente.java.
+(type surfacedual_agente)
+(roletype r surfacedual_agente)
+(typeattributeset domain (surfacedual_agente))
+; ART (app_process sin zygote) y userfaultfd del GC (solo UFFDIO_*, 0xaa00-0xaa3f).
+; El código del framework (Build, AppOpsManager...) lee propiedades al iniciarse: sin ellas abortaba ("failed to parse ''
+; as a major.minor version code", medido 17/11 en enforcing). Solo lectura, como adb shell (getprop). JIT de ART
+; (execmem, como toda app) e imagen de arranque de ART en /data/misc/apexdata.
+(allow surfacedual_agente property_type (file (read getattr map open)))
+(allow surfacedual_agente self (process (execmem)))
+(allow surfacedual_agente apex_module_data_file_202604 (dir (search)))
+(allow surfacedual_agente apex_art_data_file (dir (search)))
+(allow surfacedual_agente apex_art_data_file (file (read open getattr map execute)))
+(allow surfacedual_agente self (memfd_file (read write map execute getattr)))
+(allow surfacedual_agente dalvikcache_data_file_202604 (dir (search getattr)))
+(allow surfacedual_agente apex_info_file_202604 (file (read open getattr)))
+(allow surfacedual_agente self (anon_inode (create ioctl read)))
+(allowx surfacedual_agente self (ioctl anon_inode ((range 0xaa00 0xaa3f))))
+; Binder: servicemanager, system_server, audioserver (volumen absoluto) y SurfaceFlinger (HWUI del ayudante), y solo los
+; servicios que usa el código.
+(allow surfacedual_agente servicemanager_202604 (binder (call transfer)))
+(allow surfacedual_agente system_server_202604 (binder (call transfer)))
+(allow surfacedual_agente audioserver_202604 (binder (call transfer)))
+(allow surfacedual_agente surfaceflinger_202604 (binder (call transfer)))
+(allow surfacedual_agente activity_service_202604 (service_manager (find)))
+(allow surfacedual_agente activity_task_service_202604 (service_manager (find)))
+(allow surfacedual_agente window_service_202604 (service_manager (find)))
+(allow surfacedual_agente display_service_202604 (service_manager (find)))
+(allow surfacedual_agente input_service_202604 (service_manager (find)))
+(allow surfacedual_agente wifi_service_202604 (service_manager (find)))
+(allow surfacedual_agente location_service_202604 (service_manager (find)))
+(allow surfacedual_agente clipboard_service_202604 (service_manager (find)))
+(allow surfacedual_agente appops_service_202604 (service_manager (find)))
+(allow surfacedual_agente package_service_202604 (service_manager (find)))
+(allow surfacedual_agente audio_service_202604 (service_manager (find)))
+(allow surfacedual_agente audioserver_service_202604 (service_manager (find)))
+(allow surfacedual_agente surfaceflinger_service_202604 (service_manager (find)))
+(allow surfacedual_agente hal_graphics_mapper_service_202604 (service_manager (find)))
+; Miniaturas (ayudante, uid shell): HWUI dibuja con Mesa en /dev/dxg y /dev/sdsync; solo sus ioctl, como mediacodec.
+(typeattributeset hal_graphics_allocator_client (surfacedual_agente))
+(allow surfacedual_agente gpu_device_202604 (chr_file (ioctl open read write getattr map)))
+(allowx surfacedual_agente gpu_device_202604 (ioctl chr_file ((range 0x4700 0x47ff) 0x5301)))
+; SurfaceFlinger le pasa al ayudante el socket de su canal (BLAST/vsync); Mesa mira /dev/dri (no hay DRM: solo se calla).
+(allow surfacedual_agente surfaceflinger_202604 (fd (use)))
+(allow surfacedual_agente surfaceflinger_202604 (unix_stream_socket (read write)))
+(dontaudit surfacedual_agente device_202604 (dir (read open)))
+; Red: sesión del visor (TCP 4449); "ip route show table all" para la puerta de enlace.
+(allow surfacedual_agente self (tcp_socket (create bind listen accept read write getopt setopt getattr shutdown connect)))
+; Solo el puerto 4449 (revisión Gemini 17/11: name_bind a "port" valía para cualquiera).
+(type surfacedual_port)
+(roletype object_r surfacedual_port)
+(typeattributeset port_type (surfacedual_port))
+(portcon tcp 4449 (u object_r surfacedual_port ((s0) (s0))))
+(allow surfacedual_agente surfacedual_port (tcp_socket (name_bind)))
+(allow surfacedual_agente node_202604 (tcp_socket (node_bind)))
+(allow surfacedual_agente self (netlink_route_socket (create bind read write getattr setopt nlmsg_read)))
+; "despierta" (al reanudar la VM): "ss -K" cierra los sockets de push de Google (sock_diag + SOCK_DESTROY exige CAP_NET_ADMIN).
+(allow surfacedual_agente self (netlink_tcpdiag_socket (create bind read write getattr setopt nlmsg_read nlmsg_write)))
+(allow surfacedual_agente self (capability (net_admin)))
+; Netlink con permisos por tipo de mensaje (Android 17): sin esto ss no lista nada (medido 17/11: denied { nlmsg } nl-msgtype=20).
+; 0x14 = SOCK_DIAG_BY_FAMILY (listar), 0x15 = SOCK_DESTROY (cortar).
+(allow surfacedual_agente self (netlink_tcpdiag_socket (nlmsg)))
+(allowx surfacedual_agente self (nlmsg netlink_tcpdiag_socket (0x14 0x15)))
+(allow surfacedual_agente net_data_file_202604 (dir (search)))
+(allow surfacedual_agente net_data_file_202604 (file (read open getattr)))
+; Launcher -> agente por el socket local abstracto "surfacedual.agente" (17/11, sustituye a TCP 4450 + clave). Quién llama lo
+; decide el agente por el uid del par (SO_PEERCRED); aquí solo se deja conectar a las apps (el dominio cambia con targetSdk).
+(allow surfacedual_agente self (unix_stream_socket (create bind listen accept read write getattr getopt setopt shutdown)))
+(allow untrusted_app_34_202604 surfacedual_agente (unix_stream_socket (connectto)))
+(allow untrusted_app_202604 surfacedual_agente (unix_stream_socket (connectto)))
+; Las apps tienen categorías MLS (c231...) y el agente s0: connectto exige el mismo nivel o un sujeto de confianza (medido 17/11:
+; denied connectto con la regla TE puesta). Como netd o system_server, el agente es mlstrustedsubject.
+(typeattributeset mlstrustedsubject (surfacedual_agente))
+; Hijos: ip (system_file) y el ayudante (app_process) en este dominio; root -> uid shell para el ayudante; matar a un
+; "sh" atascado (15 s).
+(allow surfacedual_agente system_file_202604 (file (execute_no_trans)))
+(allow surfacedual_agente zygote_exec_202604 (file (execute_no_trans)))
+(allow surfacedual_agente self (capability (setuid setgid)))
+(allow surfacedual_agente shell (process (sigkill)))
+; Sus sockets TCP los etiqueta netd (SocketTagger de Java): sin esto netd no puede usar el fd y accept() falla con
+; EMSGSIZE (medido 16/11: avc denied { use } netd -> surfacedual_agente fd). Igual que system_server en la plataforma.
+(typeattributeset netdomain (surfacedual_agente))
+(allow netd_202604 surfacedual_agente (fd (use)))
+; getRecentTasks devuelve binders (token de cada tarea): sin esto la respuesta falla con EPERM (medido 16/11, "traer").
+(allow system_server_202604 surfacedual_agente (binder (call transfer)))
+; Miniaturas de Recientes (ayudante del agente, uid shell en este dominio): HWUI pide a SurfaceFlinger su conexión de vsync y
+; SF devuelve un binder; sin esto "avc denied { transfer } surfaceflinger" y el ayudante abortaba cada 3 s (medido 17/11).
+(allow surfaceflinger_202604 surfacedual_agente (binder (call transfer)))
+; Órdenes "sh -c ..." del agente (settings, appops, cmd, am, input, dumpsys): corren en el dominio shell (el de adb shell,
+; revisado por AOSP) en lugar de heredar el del agente; siguen como uid 0 para que system_server las acepte.
+; Resultado: el tipo de la plataforma (shell_202604 es un atributo y typetransition exige un tipo).
+(typetransition surfacedual_agente shell_exec_202604 process shell)
+(allow surfacedual_agente shell_exec_202604 (file (read execute open getattr map)))
+(allow surfacedual_agente shell_202604 (process (transition)))
+(allow shell_202604 surfacedual_agente (fd (use)))
+(allow shell_202604 surfacedual_agente (fifo_file (read write getattr)))
+(allow shell_202604 surfacedual_agente (process (sigchld)))
+; El agente activa las ventanas libres con "setprop persist.wm.debug.desktop_mode_enforce_device_restrictions false" (sh,
+; dominio shell): la plataforma no deja a shell fijar persist.wm.debug.* (medido 17/11: denied set).
+(allow shell_202604 persist_wm_debug_prop_202604 (property_service (set)))
+; Como uid 0, los hilos binder de "cmd" intentan subir su prioridad (CAP_SYS_NICE): sin permiso siguen igual; solo se calla.
+(dontaudit shell_202604 self (capability (sys_nice)))
+; Al cambiar de dominio el kernel limpia entorno, límites y señales (AT_SECURE): es lo seguro; solo se calla el aviso.
+(dontaudit surfacedual_agente shell (process (noatsecure rlimitinh siginh)))
+(dontaudit init_202604 surfacedual_agente (process (noatsecure)))
+; sh pregunta si su entrada/salida es una terminal (TCGETS) en cada orden: 270 avc en el ejercicio. Solo ese ioctl.
+(allow shell_202604 surfacedual_agente (fifo_file (ioctl)))
+(allowx shell_202604 surfacedual_agente (ioctl fifo_file (0x5401)))
+(allow shell_202604 surfacedual_agente_tmp (file (ioctl)))
+(allowx shell_202604 surfacedual_agente_tmp (ioctl file (0x5401)))
+; Salidas temporales del agente en /data/local/tmp: tipo propio al crearlas (sin tocar Agente.java), así system_server,
+; shell y SystemUI escriben solo en estas y no en cualquier archivo de adb (revisión Gemini/Kimi 17/11).
+(type surfacedual_agente_tmp)
+(roletype object_r surfacedual_agente_tmp)
+(typeattributeset file_type (surfacedual_agente_tmp))
+(typeattributeset data_file_type (surfacedual_agente_tmp))
+(typetransition surfacedual_agente shell_data_file_202604 file surfacedual_agente_tmp)
+(allow surfacedual_agente shell_data_file_202604 (dir (search getattr write add_name remove_name)))
+(allow surfacedual_agente surfacedual_agente_tmp (file (create read write open getattr append unlink)))
+(allow shell_202604 surfacedual_agente_tmp (file (write append getattr)))
+(allow system_server_202604 surfacedual_agente (fd (use)))
+(allow system_server_202604 surfacedual_agente (fifo_file (read write getattr)))
+(allow system_server_202604 surfacedual_agente_tmp (file (write append getattr)))
+(allow platform_app_202604 surfacedual_agente (fd (use)))
+(allow init_202604 surfacedual_agente (process (transition siginh rlimitinh)))
+(allow surfacedual_agente zygote_exec_202604 (file (read execute open getattr map entrypoint)))
+(allow surfacedual_agente system_file_202604 (file (read execute open getattr map entrypoint)))
+; Codec2 propio (hal/codec2, dominio mediacodec): decodifica con D3D12 Video por /dev/dxg (y fences por /dev/sdsync).
+(allow mediacodec gpu_device_202604 (chr_file (ioctl open read write getattr map)))
+; Solo los ioctl de dxgkrnl (tipo 0x47) y de sdsync ('S' 1): con una regla allowx, cualquier otro ioctl queda prohibido.
+(allowx mediacodec gpu_device_202604 (ioctl chr_file ((range 0x4700 0x47ff) 0x5301)))
+; Prueba del paso a software del Codec2 (debug.sd.c2.fallo_gpu): solo lectura de propiedades debug.*.
+(allow mediacodec debug_prop_202604 (file (read getattr map open)))
+; vendor.mesa.* (vendor_property_contexts, preparar.sh): ajustes de depuración de Mesa que lee todo proceso con GL (apps,
+; SurfaceFlinger, system_server, HALs del vendor). Solo lectura para todos, como vendor_qemu_prop del emulador: limitarlo
+; a appdomain pasaría la denegación a SF y a los HALs, que hoy la leen como vendor_default_prop.
+(type vendor_mesa_prop)
+(roletype object_r vendor_mesa_prop)
+(typeattributeset property_type (vendor_mesa_prop))
+(typeattributeset vendor_property_type (vendor_mesa_prop))
+(typeattributeset vendor_restricted_property_type (vendor_mesa_prop))
+(allow domain vendor_mesa_prop (file (read getattr map open)))
+; Cámaras de Windows (hal/camara): el HAL escucha en vsock 5007 y HvCamara.exe se conecta desde Windows (create, bind
+; y lo demás ya los da la política del emulador; faltan listen y accept).
+(allow hal_camera_default self (vsock_socket (listen accept)))
+; Sensores de Windows (hal/sensores): el HAL escucha en vsock 5009 y HvSensores.exe se conecta (create, bind y lo
+; demás ya los da la política del emulador; faltan listen y accept).
+(allow hal_sensors_default self (vsock_socket (listen accept)))

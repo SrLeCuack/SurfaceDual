@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Surface Dual Launcher: pantalla de inicio del modo Android (ver launcher/mockups), sobre el fondo de pantalla del sistema. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.surfacedual.launcher"
+    android:versionCode="1"
+    android:versionName="0.1">
+
+    <!-- shortcut: target 36 porque con 37 la red local (10.0.2.2) exige pedir ACCESS_LOCAL_NETWORK en tiempo de ejecución; al subir a 37, declararlo y pedirlo -->
+    <uses-sdk android:minSdkVersion="34" android:targetSdkVersion="36" />
+    <!-- avisar al visor de Windows (10.0.2.2 = el host por slirp) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+    <!-- el desinstalador del sistema lo exige para ACTION_DELETE -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- ventana superpuesta de la isla dinámica -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- ajustes rápidos propios: ver el Wi-Fi, mover brillo y giro (el agente concede WRITE_SETTINGS por appops) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- ajustes rápidos: "Conectado" si Android tiene Internet (sale por la red de la VM, no por un Wi-Fi propio) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <!-- poner el fondo elegido en "Fondo de pantalla y estilo" -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!-- leer el fondo (para difuminarlo) y las imágenes de Imágenes/Descargas: el agente lo concede por appops -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <!-- enlazarse al puente de Discover (launcher/feed, misma firma) -->
+    <uses-permission android:name="com.surfacedual.feed.ENLAZAR" />
+    <!-- Recientes: nombre e icono de tareas de apps sin icono en el cajón (p. ej. la búsqueda de Ajustes salía como paquete) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- ver los proveedores de widgets instalados (visibilidad de paquetes) -->
+        <intent>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent>
+        <!-- Discover de Google (superposición) y dictado del buscador del cajón -->
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <package android:name="com.surfacedual.feed" />
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
+    <application android:label="Surface Dual" android:hasCode="true">
+        <activity android:name=".Inicio"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:excludeFromRecents="true"
+            android:resumeWhilePausing="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode"
+            android:theme="@android:style/Theme.DeviceDefault.Wallpaper.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- respaldo: quien pida "todas las apps" recibe el cajón de Paneles -->
+            <intent-filter>
+                <action android:name="android.intent.action.ALL_APPS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Paneles flotantes (ajustes rápidos, notificaciones, recientes, cajón) que pide el agente según el gesto del visor.
+             DUMP: solo root, shell y el sistema pueden mandarlo (adb sirve para probar; una app normal no). -->
+        <receiver android:name=".OrdenPanel"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.surfacedual.launcher.PANEL" />
+            </intent-filter>
+        </receiver>
+
+        <service android:name=".AWindows"
+            android:exported="true"
+            android:label="Cambiar a Windows"
+            android:icon="@android:drawable/ic_menu_revert"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Bluetooth de Windows (reemplaza al de Android, que no tiene hardware) -->
+        <service android:name=".ABluetooth"
+            android:exported="true"
+            android:label="Bluetooth"
+            android:icon="@android:drawable/stat_sys_data_bluetooth"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Isla dinámica sobre todas las apps para control multimedia -->
+        <service android:name=".IslaOyente"
+            android:exported="true"
+            android:label="Isla dinámica"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
