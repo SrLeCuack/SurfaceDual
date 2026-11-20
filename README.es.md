@@ -6,6 +6,7 @@
 
 Surface Dual ejecuta Android 17 con Google Play en una máquina virtual de Hyper-V en equipos Windows 11 con chip Snapdragon X (solo ARM64).
 Android usa de verdad la gráfica y el chip de vídeo del equipo, y en pausa sus procesadores quedan parados (0 % de CPU, medido).
+Es una alternativa al Subsistema de Windows para Android (WSA), que Microsoft retiró, para equipos con Snapdragon X (Windows en ARM).
 
 > **Proyecto experimental.** Solo se ha probado en una Surface Pro 11 (Snapdragon X Elite), y el instalador todavía no se ha
 > probado de principio a fin en otro equipo (sí sus autopruebas). Úsalo bajo tu propio riesgo. El instalador crea antes un punto

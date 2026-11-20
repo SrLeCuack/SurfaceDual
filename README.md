@@ -6,6 +6,7 @@
 
 Surface Dual runs Android 17 with Google Play in a Hyper-V virtual machine on Windows 11 devices with a Snapdragon X chip (ARM64 only).
 Android really uses the device's GPU and video hardware, and while paused its processors are stopped (0 % CPU, measured).
+It is an alternative to Windows Subsystem for Android (WSA), which Microsoft discontinued, for Snapdragon X (Windows on ARM) devices.
 
 > **Experimental project.** Tested only on a Surface Pro 11 (Snapdragon X Elite), and the installer has not yet been tested
 > end to end on another device (its self-tests pass). Use at your own risk. The installer creates a Windows restore point
