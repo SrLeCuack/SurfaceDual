@@ -28,7 +28,9 @@ $id = (Get-VM -Name $n).Id.Guid
 # VM corriendo: los ayudantes que esperaban la reanudación (VmActiva, HvPuente.cs) reintentan ya.
 $a = $null; if ([Threading.EventWaitHandle]::TryOpenExisting('Local\SurfaceDualVmActiva', [ref]$a)) { [void]$a.Set() }
 # Un Visor de otra VM (rearme = VM nueva con otro Id) se queda en "arrancando" para siempre: fuera, y se abre uno nuevo.
-Get-CimInstance Win32_Process -Filter "Name='VisorVM.exe'" | Where-Object { $_.CommandLine -notmatch $id } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+# Solo el que lleva OTRO VmId: el que abre la Bandeja va sin argumentos (busca la VM él solo) y matarlo dejaba a Android
+# abriéndose y cerrándose (19/11: el nuevo chocaba con el mutex del que aún moría).
+Get-CimInstance Win32_Process -Filter "Name='VisorVM.exe'" | Where-Object { $_.CommandLine -match '[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}' -and $_.CommandLine -notmatch $id } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Wait-Process -Id $_.ProcessId -Timeout 5 -ErrorAction SilentlyContinue }   # que suelte el mutex antes de abrir otro (Codex)
 $residente = [bool](Get-Process VisorVM -ErrorAction SilentlyContinue)
 if (-not $residente) { Start-Process (Join-Path $h 'VisorVM.exe') $id }
 # Ayudantes: uno de cada y con el VmId de esta VM; uno de otra VM, fuera (el Visor repite esto cada vez que reanuda la VM;
