@@ -54,6 +54,10 @@ In this reading test, Android used **38 % less** power than Edge on Windows. You
 4. Wait. Building Android is the longest step: close to an hour (an estimate; it depends on your Internet). At the end, restart Windows once.
 5. Detach the keyboard (or open "Android (Surface Dual)" from the Start menu), open Play Store and sign in with your Google account.
 
+**Already installed? Updating is just as easy:** download the new version, extract it and double-click `instalador\Instalar.cmd`
+(or `instalador\Actualizar.cmd`). It notices Surface Dual is already installed and only replaces the programs and the
+Android home screen. Your Android apps and data stay as they are, and nothing is downloaded or rebuilt.
+
 The installer, Android and Surface Dual's own programs (tray icon, viewer, home screen, quick settings) all use the
 language you choose. It installs to `C:\SurfaceDual`. If it stops, open `Instalar.cmd` again and it resumes where
 it left off.

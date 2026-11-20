@@ -29,7 +29,8 @@ $privado = @($Perfil, $env:USERPROFILE, $Usuario, $env:USERNAME, $env:COMPUTERNA
   @(netsh wlan show profiles 2>$null | Select-String ':\s*(.+)$' | ForEach-Object { $_.Matches[0].Groups[1].Value.Trim() }) |
   Where-Object { $_ -and $_.Length -ge 3 -and $_ -notmatch $generico } | Sort-Object Length -Descending -Unique
 function Limpio([string]$t) {
-  foreach ($p in $privado) { $t = $t -replace [regex]::Escape($p), '<privado>' }
+  # Solo palabras completas: un usuario "Admin" no debe tapar "Administrador" (20/11, diagnóstico del probador de Reddit)
+  foreach ($p in $privado) { $t = $t -replace ('(?<![\w])' + [regex]::Escape($p) + '(?![\w])'), '<privado>' }
   $t = $t -replace '[\w.+-]+@[\w-]+\.[\w.-]+', '<correo>' -replace 'S-1-5-21(-\d+){3,4}', '<SID>'
   $t = $t -replace '\b(?:\d{1,3}\.){3}\d{1,3}\b', '<IP>' -replace '\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b', '<MAC>'
   $t

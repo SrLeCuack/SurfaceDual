@@ -28,6 +28,15 @@ function Etiqueta-Android([string]$idioma, [Globalization.CultureInfo]$ui = (Get
   if ($ui.TwoLetterISOLanguageName -eq $idioma) { $ui.Name } else { "$idioma-$region" }
 }
 
+# Paquetes de Hyper-V de Windows Home (nombre~clave~arq~idioma~versión.mum): Windows guarda varias versiones de cada uno y las
+# viejas pueden haberse limpiado, y añadirlas da 1168 "no encontrado" (20/11, usuario de Reddit). Por paquete e idioma, sus
+# versiones de la más nueva a la más vieja; primero los neutros (sin idioma), que los de idioma dependen de ellos.
+function Paquetes-HV([string[]]$nombres) {   # lista de grupos (cada uno, sus versiones); con , para que uno solo no se desenvuelva (Gemini)
+  $r = New-Object System.Collections.ArrayList
+  $nombres | Group-Object { $p = ($_ -replace '\.mum$') -split '~'; "$($p[0])~$($p[2])~$($p[3])" } | Sort-Object { ($_.Name -split '~')[2] -ne '' }, Name |
+    ForEach-Object { [void]$r.Add(@($_.Group | Sort-Object { [version]((($_ -replace '\.mum$') -split '~')[4]) } -Descending)) }
+  , $r
+}
 function Di([string]$t, [string]$color = 'Gray') { Write-Host $t -ForegroundColor $color }
 function Titulo([string]$t) { Di ''; Di "== $t ==" Cyan }
 function Pasos([string]$titulo, [string[]]$lineas) {   # lo que exige a una persona: lista numerada, un paso por línea

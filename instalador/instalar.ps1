@@ -11,6 +11,13 @@ $Idioma = Elegir-Idioma $Idioma (-not $Simular)   # lo primero: todo lo demás y
 trap { Di "ERROR: $_" Red; Di (T 'No se siguió. Lo ya hecho queda anotado; puede repetir o desinstalar.' 'Stopped. What was already done is recorded; you can run it again or uninstall.') Red; Salir 1 }
 Set-Location $env:SystemRoot   # no retener la carpeta de instalación
 $Origen = Split-Path $PSScriptRoot
+# Ya instalado (la fase 6 terminó) y esta es otra carpeta, la de una versión nueva: se actualiza, sin preguntar nada más
+# (abrir Instalar.cmd de la versión nueva antes no copiaba los programas: los arreglos no llegaban a quien ya lo tenía).
+$previa = Leer-Json (Join-Path $DATOS 'hecho.json')
+if ($previa.Launcher -and -not $Simular -and -not $EquipoFalso -and $Origen -ne $previa.Destino) {
+  Di (T '  Surface Dual ya está instalado en este equipo: se actualiza a esta versión.' '  Surface Dual is already installed on this PC: updating it to this version.') Cyan
+  & (Join-Path $PSScriptRoot 'actualizar.ps1') -Idioma $Idioma; exit $LASTEXITCODE
+}
 $yo = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $UBUNTU = 'https://cloud-images.ubuntu.com/wsl/releases/24.04/current'; $ROOTFS = 'ubuntu-noble-wsl-arm64-wsl.rootfs.tar.gz'
 $ADB_ZIP = 'https://dl.google.com/android/repository/platform-tools-latest-windows.zip'
@@ -97,7 +104,15 @@ if (-not $e.HyperV) {
   }
   if (-not $ok) { Di (T 'Sin Hyper-V no se puede instalar. No se ha cambiado nada más.' 'It cannot be installed without Hyper-V. Nothing else has been changed.') Red; Salir 2 }
   if ($casa) { Hacer (T "añadir los $($e.PaquetesHV) paquetes de Hyper-V que ya están en Windows (DISM /Add-Package)" "add the $($e.PaquetesHV) Hyper-V packages already present in Windows (DISM /Add-Package)") {
-      foreach ($m in Get-ChildItem "$env:SystemRoot\servicing\Packages\Microsoft-Hyper-V*.mum") { Dism "/Add-Package:`"$($m.FullName)`"" }; Marcar PaquetesHome $true } }
+      # De cada paquete, la versión más nueva que Windows acepte; si ninguna, se avisa y se sigue: quien manda es Enable-Feature.
+      $pkg = "$env:SystemRoot\servicing\Packages"; $sin = @()
+      foreach ($grupo in Paquetes-HV @(Get-ChildItem "$pkg\Microsoft-Hyper-V*.mum" | ForEach-Object Name)) {
+        $dentro = $false
+        foreach ($n in $grupo) { try { Dism "/Add-Package:`"$pkg\$n`""; $dentro = $true; break } catch { $causa = "$_" } }
+        if (-not $dentro) { $sin += "$($grupo[0]) ($causa)" }
+      }
+      if ($sin) { Di (T "  Aviso: $($sin.Count) paquete(s) no se pudieron añadir (suele ser una versión que Windows ya limpió); se sigue: $($sin -join '; ')" "  Warning: $($sin.Count) package(s) could not be added (usually a version Windows already cleaned up); continuing: $($sin -join '; ')") Yellow }
+      Marcar PaquetesHome $true } }
   Hacer (T 'activar la característica Hyper-V (DISM /Enable-Feature Microsoft-Hyper-V /All)' 'enable the Hyper-V feature (DISM /Enable-Feature Microsoft-Hyper-V /All)') { Dism '/Enable-Feature /FeatureName:Microsoft-Hyper-V /All'; Marcar HyperVActivado $true }
   $reiniciar = $true
 }

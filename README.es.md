@@ -54,6 +54,10 @@ En esta prueba de lectura, Android gastó **un 38 % menos** que Edge en Windows.
 4. Espera. El paso más largo es armar Android: cerca de una hora (estimado; depende de tu Internet). Al final, reinicia Windows una vez.
 5. Quita el teclado (o abre "Android (Surface Dual)" en el menú Inicio), abre Play Store e inicia sesión con tu cuenta de Google.
 
+**¿Ya lo tienes instalado? Actualizar es igual de fácil:** descarga la versión nueva, descomprímela y haz doble clic en
+`instalador\Instalar.cmd` (o `instalador\Actualizar.cmd`). Detecta que Surface Dual ya está instalado y solo cambia los
+programas y la pantalla de inicio de Android. Tus apps y datos de Android se quedan igual, y no se descarga ni se rearma nada.
+
 El instalador, Android y los programas de Surface Dual (icono de la bandeja, visor, pantalla de inicio, ajustes rápidos)
 usan el idioma que elijas. Se instala en `C:\SurfaceDual`. Si se corta, vuelve a abrir `Instalar.cmd` y sigue
 donde se quedó.
