@@ -1300,7 +1300,7 @@ class VisorVM : Form
                                 cuadros = 0;
                                 bytes = 0;
                                 crono.Restart();
-                                Text = string.Format("VisorVM - {0:F1} fps | {1:F1} MB/s | subida+present: {2:F2} ms ({3}x{4})",
+                                Text = string.Format(Idioma.T("VisorVM - {0:F1} fps | {1:F1} MB/s | subida+present: {2:F2} ms ({3}x{4})", "VisorVM - {0:F1} fps | {1:F1} MB/s | upload+present: {2:F2} ms ({3}x{4})"),
                                     fps, mbps, msCopia, ancho, alto);
                             }
 
@@ -1356,7 +1356,8 @@ class VisorVM : Form
             if (Guid.TryParse(outStr, out id)) return id;
         }
         catch { }
-        throw new InvalidOperationException("No se encontró la VM 'SurfaceDualAndroid'. Pasa el VmId como argumento: VisorVM.exe <VmId>");
+        throw new InvalidOperationException(Idioma.T("No se encontró la VM 'SurfaceDualAndroid'. Pasa el VmId como argumento: VisorVM.exe <VmId>",
+            "Couldn't find the 'SurfaceDualAndroid' VM. Pass the VmId as an argument: VisorVM.exe <VmId>"));
     }
 
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
@@ -1396,8 +1397,9 @@ class VisorVM : Form
 // queda en 95 % hasta el primer cuadro real. Solo vive durante el arranque.
 sealed class Arranque : Control
 {
-    static readonly string[] frases = { "Despertando al robot…", "Preparando la casa…", "Peleando por la RAM…",
-        "Calentando la tarjeta gráfica…", "Acomodando tus apps…", "Poniendo la mesa…", "Casi listo…" };
+    static readonly string[] frases = { Idioma.T("Despertando al robot…", "Waking up the robot…"), Idioma.T("Preparando la casa…", "Getting the house ready…"),
+        Idioma.T("Peleando por la RAM…", "Fighting for RAM…"), Idioma.T("Calentando la tarjeta gráfica…", "Warming up the graphics card…"),
+        Idioma.T("Acomodando tus apps…", "Arranging your apps…"), Idioma.T("Poniendo la mesa…", "Setting the table…"), Idioma.T("Casi listo…", "Almost ready…") };
     readonly Stopwatch reloj = Stopwatch.StartNew();
     readonly System.Windows.Forms.Timer animacion = new System.Windows.Forms.Timer { Interval = 33 };
     readonly int esperadoMs = (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "ArranqueMs", 36000) as int?) ?? 36000;
@@ -1463,7 +1465,8 @@ sealed class Arranque : Control
         {
             g.DrawString("Surface Dual", titulo, blanco, cx, cy + 10.5f * u, centro);
             g.DrawString(frases[(int)(reloj.ElapsedMilliseconds / 2500) % frases.Length], texto, gris, cx, cy + 17.5f * u, centro);
-            g.DrawString("El primer encendido tarda unos 30 segundos; después, cambiar entre Windows y Android es instantáneo.",
+            g.DrawString(Idioma.T("El primer encendido tarda unos 30 segundos; después, cambiar entre Windows y Android es instantáneo.",
+                "The first start takes about 30 seconds; after that, switching between Windows and Android is instant."),
                 nota, gris, cx, Height - 6 * u, centro);
         }
     }
@@ -1557,7 +1560,7 @@ sealed class D3D : IDisposable
         // Comprobación pequeña de los tamaños ABI que afectan al interop ARM64.
         if (IntPtr.Size != 8 || Marshal.SizeOf(typeof(CadenaDesc)) != 72 ||
             Marshal.SizeOf(typeof(TexturaDesc)) != 44 || Marshal.SizeOf(typeof(SamplerDesc)) != 52)
-            throw new PlatformNotSupportedException("El visor requiere el ABI ARM64 de 64 bits.");
+            throw new PlatformNotSupportedException(Idioma.T("El visor requiere el ABI ARM64 de 64 bits.", "The viewer requires the 64-bit ARM64 ABI."));
         try
         {
             var desc = new CadenaDesc { modo = new Modo { formato = 28 }, muestras = 1,
@@ -1611,7 +1614,7 @@ float4 PSUI(V i) : SV_Target { return imagen.Sample(filtro, i.uv); }", "PSUI", "
             byte[] bytes = System.Text.Encoding.ASCII.GetBytes(fuente);
             int hr = D3DCompile(bytes, (UIntPtr)(uint)bytes.Length, "VisorVM", IntPtr.Zero, IntPtr.Zero,
                 entrada, perfil, 1 << 15, 0, out codigo, out errores);
-            if (hr < 0) throw new InvalidOperationException(errores == IntPtr.Zero ? "D3DCompile falló." :
+            if (hr < 0) throw new InvalidOperationException(errores == IntPtr.Zero ? Idioma.T("D3DCompile falló.", "D3DCompile failed.") :
                 Marshal.PtrToStringAnsi(Metodo<BlobPtr>(errores, 3)(errores)));
             Comprobar(Metodo<CrearShader>(dispositivo, indice)(dispositivo,
                 Metodo<BlobPtr>(codigo, 3)(codigo), Metodo<BlobTam>(codigo, 4)(codigo), IntPtr.Zero, out shader));

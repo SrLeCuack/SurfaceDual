@@ -16,19 +16,20 @@ NDK_URL=https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
 NDK_TAM=663987688 NDK_SHA=090e8083a715fdb1a3e402d0763c388abb03fb4e
 NDK=$R/herramientas/ndk; NDKP=android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64
 INITRD=$R/F2/build/avd/initrd_whpx_base; VSD=/root/vsd/src; PUB=/root/.android/adbkey.pub; F4=$R/RutaA/fase4
-[ "$(id -u)" = 0 ] || { echo "ERROR: hay que ejecutarlo como root (wsl -u root)"; exit 1; }
+t() { if [ "${SD_IDIOMA:-es}" = en ]; then echo "$2"; else echo "$1"; fi; }   # idioma elegido en el instalador (SD_IDIOMA=es|en)
+[ "$(id -u)" = 0 ] || { t "ERROR: hay que ejecutarlo como root (wsl -u root)" "ERROR: this must run as root (wsl -u root)"; exit 1; }
 
 paso() {   # paso <letra> <qué hace> <condición de "ya hecho"> <función>
-  if eval "$3"; then echo "[$1] $2: ya estaba hecho"; return; fi
-  if [ "$MODO" = simular ]; then echo "[$1] $2: se haría ahora"; return; fi
-  echo "[$1] $2..."; "$4"; echo "[$1] $2: listo"
+  if eval "$3"; then t "[$1] $2: ya estaba hecho" "[$1] $2: already done"; return; fi
+  if [ "$MODO" = simular ]; then t "[$1] $2: se haría ahora" "[$1] $2: would be done now"; return; fi
+  echo "[$1] $2..."; "$4"; t "[$1] $2: listo" "[$1] $2: done"
 }
-licencia() { [ "${SD_LICENCIA_GOOGLE:-}" = ACEPTO ] || { echo "ERROR: sin aceptar la licencia del SDK de Android (SD_LICENCIA_GOOGLE=ACEPTO) no se descarga nada de Google"; exit 1; }; }
+licencia() { [ "${SD_LICENCIA_GOOGLE:-}" = ACEPTO ] || { t "ERROR: sin aceptar la licencia del SDK de Android (SD_LICENCIA_GOOGLE=ACEPTO) no se descarga nada de Google" "ERROR: nothing is downloaded from Google unless the Android SDK license is accepted (SD_LICENCIA_GOOGLE=ACEPTO)"; exit 1; }; }
 verificar() { [ "$(stat -c %s "$1" 2>/dev/null)" = "$2" ] && [ "$(sha1sum < "$1" | cut -d' ' -f1)" = "$3" ]; }
 descargar() {   # url destino tamaño sha1: reanuda lo ya bajado (.part) y solo deja el archivo final si casa
   verificar "$2" "$3" "$4" && return; mkdir -p "$(dirname "$2")"
   verificar "$2.part" "$3" "$4" || curl -fL --retry 5 -C - -o "$2.part" "$1"
-  verificar "$2.part" "$3" "$4" || { rm -f "$2.part"; echo "ERROR: $2 llegó dañado (tamaño o SHA-1); vuelva a ejecutar"; exit 1; }
+  verificar "$2.part" "$3" "$4" || { rm -f "$2.part"; t "ERROR: $2 llegó dañado (tamaño o SHA-1); vuelva a ejecutar" "ERROR: $2 arrived damaged (size or SHA-1); run it again"; exit 1; }
   mv "$2.part" "$2"
 }
 extraer() { python3 -I -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); p = tuple(sys.argv[3:])
@@ -49,7 +50,7 @@ apt_haz() { apt-get update -qq; DEBIAN_FRONTEND=noninteractive apt-get install -
 # g) Clave adb de ESTE equipo. preparar.sh mete la pública en el bootconfig; la privada solo la usa adb.exe de Windows, que
 # la busca en %USERPROFILE%\.android (si la persona ya usaba adb, se reutiliza la suya).
 clave_publica() {   # formato de adb (RSAPublicKey de Android): 64 palabras, n0inv = -1/n mod 2^32, n y R^2 mod n en little endian, e
-  [[ $(openssl rsa -in "$1" -noout -text 2>/dev/null) == *"publicExponent: 65537 "* ]] || { echo "ERROR: $1 no es una clave RSA de adb"; exit 1; }
+  [[ $(openssl rsa -in "$1" -noout -text 2>/dev/null) == *"publicExponent: 65537 "* ]] || { t "ERROR: $1 no es una clave RSA de adb" "ERROR: $1 is not an adb RSA key"; exit 1; }
   openssl rsa -in "$1" -noout -modulus | python3 -I -c 'import base64, struct, sys
 n = int(sys.stdin.read().split("=")[1], 16); assert n.bit_length() == 2048, "adb exige RSA-2048"
 r = struct.pack("<II", 64, -pow(n, -1, 1 << 32) % (1 << 32)) + n.to_bytes(256, "little") + pow(2, 4096, n).to_bytes(256, "little") + struct.pack("<I", 65537)
@@ -58,7 +59,7 @@ print(base64.b64encode(r).decode() + " surfacedual@armado")'
 }
 adb_haz() {
   local WA; WA=${SD_ADB_DIR:-$(wslpath -u "$(cd /mnt/c && cmd.exe /d /c 'echo %USERPROFILE%' | tr -d '\r')")/.android}
-  [ -d "$(dirname "$WA")" ] || { echo "ERROR: no encuentro la carpeta de usuario de Windows ($WA)"; exit 1; }
+  [ -d "$(dirname "$WA")" ] || { t "ERROR: no encuentro la carpeta de usuario de Windows ($WA)" "ERROR: the Windows user folder was not found ($WA)"; exit 1; }
   mkdir -p "$WA" /root/.android
   [ -f "$WA/adbkey" ] || openssl genrsa -out "$WA/adbkey" 2048 2>/dev/null
   [ -s "$WA/adbkey.pub" ] || clave_publica "$WA/adbkey" > "$WA/adbkey.pub"
@@ -77,7 +78,7 @@ initrd_haz() {
 # d) Vendor del emulador sin UWB y con la radio deshabilitada (receta de F4/rev_vendor_sd_codex.md), con sus etiquetas SELinux.
 vendor_haz() {
   local V M; V=$(lp vendor); M=$(dirname "$VSD")/mnt
-  [ "$V" = "734003200 68796416" ] || { echo "ERROR: vendor en '$V' de super; preparar.sh espera 734003200 68796416"; exit 1; }
+  [ "$V" = "734003200 68796416" ] || { t "ERROR: vendor en '$V' de super; preparar.sh espera 734003200 68796416" "ERROR: vendor at '$V' in super; preparar.sh expects 734003200 68796416"; exit 1; }
   montar "$IMG/system.img" $V "$M"; rm -rf "$VSD.tmp"; cp -a --preserve=all "$M" "$VSD.tmp"; umount "$M"
   rm "$VSD.tmp/etc/permissions/android.hardware.uwb.xml"
   sed -i '1a\    disabled' "$VSD.tmp/etc/init/android.hardware.radio.ranchu.rc"
@@ -109,7 +110,7 @@ ndk_haz() {
 }
 VA=/opt/fase4/video/mesa/build
 siembra_haz() {
-  [ -f "$R/precompilados.tar.zst" ] || { echo "ERROR: falta $R/precompilados.tar.zst (lo crea empaquetar.ps1)"; exit 1; }
+  [ -f "$R/precompilados.tar.zst" ] || { t "ERROR: falta $R/precompilados.tar.zst (lo crea empaquetar.ps1)" "ERROR: $R/precompilados.tar.zst is missing (empaquetar.ps1 creates it)"; exit 1; }
   zstd -dcq "$R/precompilados.tar.zst" | tar -x -C /
   # video/compilar_android.sh llama siempre a ninja en el árbol de Mesa VA; el real lleva rutas de la máquina de origen y
   # aquí recompilaría contra un NDK que no existe. Con el driver ya sembrado como salida "phony", ninja no tiene trabajo.
@@ -122,18 +123,18 @@ siembra_haz() {
 armado_hecho() { [ -f "$F4/arranque.vhdx" ] && [ -f "$F4/android.vhdx" ] && [ "${SD_REHACER:-0}" != 1 ]; }
 armado_haz() {
   [ ! -f "$F4/android.vhdx" ] || [ "${SD_REHACER:-0}" = 1 ] ||
-    { echo "ERROR: ya hay un android.vhdx (datos de Android); no se toca. SD_REHACER=1 lo rehace de fábrica"; exit 1; }
+    { t "ERROR: ya hay un android.vhdx (datos de Android); no se toca. SD_REHACER=1 lo rehace de fábrica" "ERROR: an android.vhdx (Android data) already exists; it is left alone. SD_REHACER=1 rebuilds it from factory"; exit 1; }
   # Producción (19/11): no depurable, adb solo con la clave de este equipo (la de g), sin consola serie. Instalar el launcher,
   # ponerlo de inicio y añadir el botón por adb (instalar.ps1, fase 5) funciona igual como usuario shell: probado 19/11.
   FABRICA=1 VERIFICADO=0 PRODUCCION=1 bash "$F4/preparar.sh"
-  [ -f "$F4/arranque.vhdx" ] && [ -f "$F4/android.vhdx" ] || { echo "ERROR: preparar.sh terminó sin arranque.vhdx y android.vhdx"; exit 1; }
+  [ -f "$F4/arranque.vhdx" ] && [ -f "$F4/android.vhdx" ] || { t "ERROR: preparar.sh terminó sin arranque.vhdx y android.vhdx" "ERROR: preparar.sh finished without arranque.vhdx and android.vhdx"; exit 1; }
 }
 
 if [ "$MODO" = prueba ]; then   # en seco: zip local, sin red, todo dentro de $P; compara con lo que ya hay en este equipo
   mkdir -p "$P"; P=$(cd "$P" && pwd); IMG=$P/imagen/arm64-v8a; INITRD=$P/initrd_whpx_base; VSD=$P/vsd/src
   verificar "$IMGZ" $IMG_TAM $IMG_SHA && echo "zip: tamaño y SHA-1 correctos" || { echo "zip: NO casa"; exit 1; }
   extraer "$IMGZ" "$P/imagen" arm64-v8a/ramdisk.img arm64-v8a/system.img
-  rm -rf "$INITRD" "$VSD"; paso c "initrd_whpx_base" false initrd_haz; paso d "vendor en $VSD" false vendor_haz
+  rm -rf "$INITRD" "$VSD"; paso c "initrd_whpx_base" false initrd_haz; paso d "$(t "vendor en $VSD" "vendor in $VSD")" false vendor_haz
   rm -rf "$P/rd_nuevo" "$P/rd_actual"; mkdir -p "$P/rd_nuevo" "$P/rd_actual"
   cmp -s "$INITRD" "$R/F2/build/avd/initrd_whpx_base" && echo "initrd: bytes idénticos" || echo "initrd: bytes distintos (cmp)"
   (cd "$P/rd_nuevo" && lz4 -dc "$INITRD" | cpio -id --quiet); (cd "$P/rd_actual" && { lz4 -dc "$R/F2/build/avd/initrd_whpx_base" 2>/dev/null | cpio -id --quiet; } || true)
@@ -147,14 +148,14 @@ if [ "$MODO" = prueba ]; then   # en seco: zip local, sin red, todo dentro de $P
   exit 0
 fi
 
-echo "Surface Dual: armado en $R (modo $MODO)"
-paso a "paquetes de Ubuntu" apt_hecho apt_haz
-paso g "clave adb de este equipo" "[ -s $PUB ]" adb_haz
-paso b "imagen de Google en $IMG" "[ -f '$IMG/.sd_extraido' ]" imagen_haz
+t "Surface Dual: armado en $R (modo $MODO)" "Surface Dual: building in $R (mode $MODO)"
+paso a "$(t "paquetes de Ubuntu" "Ubuntu packages")" apt_hecho apt_haz
+paso g "$(t "clave adb de este equipo" "adb key of this PC")" "[ -s $PUB ]" adb_haz
+paso b "$(t "imagen de Google en $IMG" "Google image in $IMG")" "[ -f '$IMG/.sd_extraido' ]" imagen_haz
 paso c "initrd_whpx_base" "[ -f '$INITRD' ]" initrd_haz
-paso d "vendor en $VSD" "[ -d $VSD/etc ]" vendor_haz
-paso e "Bionic de la imagen en RutaA/bionic" bionic_hecho bionic_haz
+paso d "$(t "vendor en $VSD" "vendor in $VSD")" "[ -d $VSD/etc ]" vendor_haz
+paso e "$(t "Bionic de la imagen en RutaA/bionic" "Bionic from the image in RutaA/bionic")" bionic_hecho bionic_haz
 paso f "NDK r27c (sysroot)" "[ -f '$NDK/android-ndk-r27c/.sd_extraido' ]" ndk_haz
-paso f "precompilados propios en /opt" "[ -f /opt/.sd_sembrado ]" siembra_haz
-paso h "arranque.vhdx y android.vhdx (preparar.sh)" armado_hecho armado_haz
-echo "Surface Dual: armado terminado"
+paso f "$(t "precompilados propios en /opt" "our prebuilt files in /opt")" "[ -f /opt/.sd_sembrado ]" siembra_haz
+paso h "$(t "arranque.vhdx y android.vhdx (preparar.sh)" "arranque.vhdx and android.vhdx (preparar.sh)")" armado_hecho armado_haz
+t "Surface Dual: armado terminado" "Surface Dual: build finished"

@@ -84,11 +84,12 @@ public class AWindows extends TileService {
     /** Pregunta cómo salir (pedido del usuario 16/11): Suspender = volver al instante después (Android sigue ocupando su RAM);
      *  Apagar = libera la RAM, la próxima vez enciende en ~20 s. */
     static android.app.AlertDialog dialogo(Context c) {
-        return new android.app.AlertDialog.Builder(c).setTitle("Volver a Windows")
-            .setMessage("Suspender: Android queda en pausa y vuelve al instante (si pasa 1 hora sin volver, se apaga solo).\nApagar: libera la memoria; encender de nuevo tarda unos 35 segundos.")
-            .setPositiveButton("Suspender", (d, w) -> volver(c, false))
-            .setNegativeButton("Apagar", (d, w) -> volver(c, true))
-            .setNeutralButton("Cancelar", null).create();
+        return new android.app.AlertDialog.Builder(c).setTitle(Idioma.t("Volver a Windows", "Back to Windows"))
+            .setMessage(Idioma.t("Suspender: Android queda en pausa y vuelve al instante (si pasa 1 hora sin volver, se apaga solo).\nApagar: libera la memoria; encender de nuevo tarda unos 35 segundos.",
+                "Suspend: Android pauses and resumes instantly (it shuts down on its own after 1 hour away).\nShut down: frees up memory; starting again takes about 35 seconds."))
+            .setPositiveButton(Idioma.t("Suspender", "Suspend"), (d, w) -> volver(c, false))
+            .setNegativeButton(Idioma.t("Apagar", "Shut down"), (d, w) -> volver(c, true))
+            .setNeutralButton(Idioma.t("Cancelar", "Cancel"), null).create();
     }
 
     static void volver(Context c) { volver(c, false); }
@@ -114,7 +115,7 @@ public class AWindows extends TileService {
             o.flush();
         } catch (Exception e) {
             new Handler(Looper.getMainLooper()).post(() ->
-                    Toast.makeText(app, "No se pudo avisar a Windows", Toast.LENGTH_SHORT).show());
+                    Toast.makeText(app, Idioma.t("No se pudo avisar a Windows", "Couldn't reach Windows"), Toast.LENGTH_SHORT).show());
         } finally {
             enCurso.set(false);
         }

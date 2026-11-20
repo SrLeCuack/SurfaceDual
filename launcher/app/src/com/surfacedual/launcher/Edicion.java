@@ -65,9 +65,9 @@ class Edicion {
         col.addView(sep, new LinearLayout.LayoutParams(1, 0, 1));
         pie = new LinearLayout(ini);
         pie.setGravity(Gravity.CENTER);
-        pie.addView(botonPie("ic_menu_gallery", "Fondo de pantalla y estilo", v -> { salir(-1); Hojas.fondo(ini); }));
+        pie.addView(botonPie("ic_menu_gallery", Idioma.t("Fondo de pantalla y estilo", "Wallpaper & style"), v -> { salir(-1); Hojas.fondo(ini); }));
         pie.addView(botonPie("ic_widgets", "Widgets", v -> { int p = paginaCentrada(); salir(-1); ini.widgets.selector(Math.max(0, p)); }));
-        pie.addView(botonPie("ic_settings_24dp", "Ajustes", v -> { salir(-1); Hojas.ajustes(ini); }));
+        pie.addView(botonPie("ic_settings_24dp", Idioma.t("Ajustes", "Settings"), v -> { salir(-1); Hojas.ajustes(ini); }));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = ini.dp(40);
         col.addView(pie, lp);
@@ -122,7 +122,7 @@ class Edicion {
                 armar();
                 cinta.post(() -> cinta.scrollTo(x, 0));   // sin saltar a la primera tarjeta
             });
-            home.setContentDescription(casa ? "Página principal" : "Hacer principal");
+            home.setContentDescription(casa ? Idioma.t("Página principal", "Main page") : Idioma.t("Hacer principal", "Set as main page"));
             fila.addView(home);
             if (k > 0) fila.addView(boton("ic_delete", Color.WHITE, v -> {
                 if (ini.bloqueado()) return;
@@ -190,7 +190,7 @@ class Edicion {
         f.setBackground(ini.seleccionable());
         TextView t = new TextView(ini);
         ini.estilo(t, 14, true, Color.WHITE);
-        t.setText(on ? "Activado" : "Desactivado");
+        t.setText(on ? Idioma.t("Activado", "On") : Idioma.t("Desactivado", "Off"));
         f.addView(t);
         f.addView(Hojas.interruptor(ini, on), margenIzq(ini.dp(10)));
         f.setOnClickListener(v -> {

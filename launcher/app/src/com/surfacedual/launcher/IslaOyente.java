@@ -68,12 +68,12 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
                 BatteryManager bm = c.getSystemService(BatteryManager.class);
                 a.clave = "breve"; a.color = Isla.VERDE;
                 a.icono = Paneles.de(c).icono("ic_qs_battery_saver", Isla.VERDE);
-                a.texto = (bm == null ? "" : bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) + " % ") + "· Cargando";
+                a.texto = (bm == null ? "" : bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) + Idioma.t(" % ", "% ")) + Idioma.t("· Cargando", "· Charging");
             } else if (AudioManager.RINGER_MODE_CHANGED_ACTION.equals(ac)) {
                 int m = i.getIntExtra(AudioManager.EXTRA_RINGER_MODE, AudioManager.RINGER_MODE_NORMAL);
                 a.clave = "breve"; a.color = m == AudioManager.RINGER_MODE_NORMAL ? Color.WHITE : 0xFFFF9F0A;
                 a.icono = Paneles.de(c).icono(m == AudioManager.RINGER_MODE_NORMAL ? "ic_volume" : "ic_audio_vol_mute", a.color);
-                a.texto = m == AudioManager.RINGER_MODE_SILENT ? "Silencio" : m == AudioManager.RINGER_MODE_VIBRATE ? "Vibración" : "Sonido";
+                a.texto = m == AudioManager.RINGER_MODE_SILENT ? Idioma.t("Silencio", "Silent") : m == AudioManager.RINGER_MODE_VIBRATE ? Idioma.t("Vibración", "Vibrate") : Idioma.t("Sonido", "Sound");
             } else if ("android.media.VOLUME_CHANGED_ACTION".equals(ac)) {
                 if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1) != AudioManager.STREAM_MUSIC) return;
                 if (android.os.SystemClock.uptimeMillis() - volWindows < 1500) return;   // lo movió Windows (su propio aviso ya se ve)
@@ -83,7 +83,7 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
                 a.clave = "breve"; a.color = Color.WHITE;
                 a.icono = Paneles.de(c).icono("ic_volume", Color.WHITE);
                 a.progreso = 100 * v / max;
-                a.texto = (100 * v / max) + " %";
+                a.texto = (100 * v / max) + Idioma.t(" %", "%");
             } else return;
             is.avisoBreve(a);
         }
@@ -146,8 +146,8 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
         Isla.Act a = new Isla.Act();
         a.clave = "privacidad"; a.prio = Isla.P_GRABAR; a.color = cam ? Isla.VERDE : 0xFFFF9F0A;   // como iOS: verde cámara, naranja micrófono
         a.icono = Paneles.de(this).iconoPaquete(pkg);
-        a.texto = cam ? "Cámara" : "Micrófono";
-        a.titulo = Paneles.de(this).etiqueta(pkg) + (cam ? " usa la cámara" : " usa el micrófono");
+        a.texto = cam ? Idioma.t("Cámara", "Camera") : Idioma.t("Micrófono", "Microphone");
+        a.titulo = Paneles.de(this).etiqueta(pkg) + (cam ? Idioma.t(" usa la cámara", " is using the camera") : Idioma.t(" usa el micrófono", " is using the microphone"));
         is.poner(a);
     }
 
@@ -214,7 +214,7 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
         // Privado (como en la pantalla de bloqueo de Android): su versión pública o solo "Nuevo aviso".
         Notification ver = n.visibility == Notification.VISIBILITY_PRIVATE ? n.publicVersion : n;
         CharSequence titulo = ver == null ? null : ver.extras.getCharSequence(Notification.EXTRA_TITLE);
-        CharSequence texto = ver == null ? "Nuevo aviso" : ver.extras.getCharSequence(Notification.EXTRA_TEXT);
+        CharSequence texto = ver == null ? Idioma.t("Nuevo aviso", "New notification") : ver.extras.getCharSequence(Notification.EXTRA_TEXT);
         CharSequence app = s.getPackageName();
         try { app = getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(s.getPackageName(), 0)); }
         catch (android.content.pm.PackageManager.NameNotFoundException ignored) { }
@@ -293,7 +293,7 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
             a.icono = icono(n, pkg);
             if (crono) { a.crono = true; a.base = n.when; a.cuentaAtras = x.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN); }
             // Temporizador vencido (sonando o perdido): "Terminado" con sus botones (Detener/Restablecer), no una cuenta negativa.
-            if (a.crono && a.cuentaAtras && a.base <= System.currentTimeMillis()) { a.crono = false; a.texto = "Terminado"; a.color = Isla.ROJO; }
+            if (a.crono && a.cuentaAtras && a.base <= System.currentTimeMillis()) { a.crono = false; a.texto = Idioma.t("Terminado", "Time's up"); a.color = Isla.ROJO; }
         } else if (pkg.equals("com.android.systemui") && n.getChannelId() != null && n.getChannelId().contains("screen_record")) {
             a.prio = Isla.P_GRABAR; a.color = Isla.ROJO;
             a.icono = Paneles.de(this).icono("ic_media_route_connected_light_00_mtrl", Isla.ROJO);
@@ -302,13 +302,13 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
             a.prio = Isla.P_PROGRESO;
             a.icono = icono(n, pkg);
             a.progreso = max > 0 ? Math.max(0, Math.min(100, 100 * pr / max)) : 0;
-            if (a.texto == null) a.texto = a.progreso + " %";
+            if (a.texto == null) a.texto = a.progreso + Idioma.t(" %", "%");
         } else if (n.getChannelId() != null && n.getChannelId().toLowerCase(java.util.Locale.ROOT).contains("timer") && n.actions != null) {
             // Temporizador en pausa (Reloj): sin cronómetro ni "en curso", pero sigue en la isla con Reanudar/Reiniciar, como en el iPhone.
             // shortcut: se reconoce por el canal "timer" (Reloj de Google y DeskClock); otra app de temporizador, añadir su canal.
             a.prio = Isla.P_TIEMPO; a.color = 0xFFFF9F0A;
             a.icono = icono(n, pkg);
-            a.texto = "En pausa";
+            a.texto = Idioma.t("En pausa", "Paused");
         } else if (a.destacada) {   // otra "Live Update" de Android 16+: se muestra tal cual
             a.prio = Isla.P_PROGRESO;
             a.icono = icono(n, pkg);
@@ -403,7 +403,7 @@ public class IslaOyente extends NotificationListenerService implements MediaSess
         a.imagen = cov;
         a.color = colorVisto;
         a.icono = Paneles.de(this).iconoPaquete(mc.getPackageName());
-        if (a.titulo == null) a.titulo = "Reproduciendo";
+        if (a.titulo == null) a.titulo = Idioma.t("Reproduciendo", "Now playing");
         is.poner(a);
     }
 

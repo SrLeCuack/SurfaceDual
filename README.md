@@ -47,12 +47,14 @@ In this reading test, Android used **38 % less** power than Edge on Windows. You
 ## Installation
 
 1. Download the `.zip` of the latest version from [Releases](../../releases) and extract it.
-2. Double-click `instalador\Instalar.cmd`. It checks your device first and asks before changing anything.
-3. If every check says "bien" (OK), type `SI` (yes) to install and accept the Windows prompt (UAC).
+2. Double-click `instalador\Instalar.cmd` and choose the language: `2` = English (`1` = Spanish). It checks your device first
+   and asks before changing anything.
+3. If every check says "ok", type `YES` to install and accept the Windows prompt (UAC).
 4. Wait. Building Android is the longest step: close to an hour (an estimate; it depends on your Internet). At the end, restart Windows once.
 5. Detach the keyboard (or open "Android (Surface Dual)" from the Start menu), open Play Store and sign in with your Google account.
 
-The installer is in Spanish and installs to `C:\SurfaceDual`. If it stops, open `Instalar.cmd` again and it resumes where
+The installer, Android and Surface Dual's own programs (tray icon, viewer, home screen, quick settings) all use the
+language you choose. It installs to `C:\SurfaceDual`. If it stops, open `Instalar.cmd` again and it resumes where
 it left off.
 
 **Uninstall:** double-click `instalador\Desinstalar.cmd`. It undoes what the installer did, using the Windows state it recorded before installing.

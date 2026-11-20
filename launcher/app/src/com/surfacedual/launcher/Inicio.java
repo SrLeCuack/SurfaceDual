@@ -155,6 +155,8 @@ public class Inicio extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        // Android cambió de idioma con la app viva: paneles, asa e isla guardan textos ya pintados; el sistema relanza el inicio entero
+        if (!Idioma.AL_NACER.equals(java.util.Locale.getDefault().getLanguage())) { android.os.Process.killProcess(android.os.Process.myPid()); return; }
         previa = new Configuration(getResources().getConfiguration());
         AWindows.escuchar(this);
         prefs = getSharedPreferences("inicio", MODE_PRIVATE);
@@ -321,7 +323,7 @@ public class Inicio extends Activity {
     int paginaActual() { return carril == null ? 0 : Math.max(0, carril.pagina - carril.base()); }
     boolean bloqueado() {
         if (!prefs.getBoolean("bloqueo", false)) return false;
-        Toast.makeText(this, "El diseño del inicio está bloqueado (Ajustes de inicio)", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, Idioma.t("El diseño del inicio está bloqueado (Ajustes de inicio)", "Home screen layout is locked (Home settings)"), Toast.LENGTH_SHORT).show();
         return true;
     }
     int icono() { return prefs.getInt("icono", 64); }
@@ -382,9 +384,9 @@ public class Inicio extends Activity {
         // soltar (no lo acepta: "Drop result=false") y las carpetas de la primera fila no lo reciben.
         zonasArrastre.setOrientation(LinearLayout.VERTICAL);
         zonasArrastre.setPadding(0, dp(32), 0, 0);
-        for (String accion : new String[]{"Desinstalar", "Información de la app"}) {
-            Button zona = boton(accion, Color.WHITE, TARJETA, BORDE);
-            recibir(zona, accion, false);
+        for (String[] accion : new String[][]{{"Desinstalar", "Uninstall"}, {"Información de la app", "App info"}}) {
+            Button zona = boton(Idioma.t(accion[0], accion[1]), Color.WHITE, TARJETA, BORDE);
+            recibir(zona, accion[0], false);   // la clave queda en español: recibir() la compara con "Desinstalar"
             LinearLayout.LayoutParams lz = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(64));
             lz.bottomMargin = dp(16);
             zonasArrastre.addView(zona, lz);
@@ -525,7 +527,7 @@ public class Inicio extends Activity {
             TextView t = new TextView(this);
             estilo(t, 16, false, TEXTO2);
             t.setGravity(Gravity.CENTER);
-            t.setText("Página vacía\nMantén pulsado o pellizca para añadir widgets");
+            t.setText(Idioma.t("Página vacía\nMantén pulsado o pellizca para añadir widgets", "Empty page\nTouch and hold or pinch to add widgets"));
             f.addView(t, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
             return f;
         }
@@ -545,8 +547,8 @@ public class Inicio extends Activity {
         hora.setShadowLayer(dp(12), 0, dp(2), 0x66000000);   // legible sobre cualquier fondo
         col.addView(hora);
         TextClock fecha = new TextClock(this);
-        fecha.setFormat24Hour("EEEE, d 'de' MMMM");
-        fecha.setFormat12Hour("EEEE, d 'de' MMMM");
+        fecha.setFormat24Hour(Idioma.t("EEEE, d 'de' MMMM", "EEEE, MMMM d"));
+        fecha.setFormat12Hour(Idioma.t("EEEE, d 'de' MMMM", "EEEE, MMMM d"));
         estilo(fecha, 22, false, Color.WHITE);
         fecha.setShadowLayer(dp(8), 0, dp(1), 0x66000000);
         col.addView(fecha);
@@ -707,7 +709,7 @@ public class Inicio extends Activity {
             startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(a.comp)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | extra));
         } catch (ActivityNotFoundException | SecurityException e) {   // desinstalada o deshabilitada desde la última carga
-            Toast.makeText(this, "No se pudo abrir " + a.nombre, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, Idioma.t("No se pudo abrir ", "Couldn't open ") + a.nombre, Toast.LENGTH_SHORT).show();
             cargarApps();
             mostrar();
         }
@@ -816,10 +818,10 @@ public class Inicio extends Activity {
         for (App a : apps) if (desinstalable(a)) l.add(a);
         if (l.isEmpty()) return;
         new AlertDialog.Builder(this)
-                .setTitle(l.size() == 1 ? "¿Desinstalar " + l.get(0).nombre + "?" : "¿Desinstalar " + l.size() + " apps?")
-                .setMessage(l.size() == 1 ? "Se quitarán la app y sus datos." : "Se quitarán las apps y sus datos.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Desinstalar", (dlg, w) -> {
+                .setTitle(l.size() == 1 ? Idioma.t("¿Desinstalar " + l.get(0).nombre + "?", "Uninstall " + l.get(0).nombre + "?") : Idioma.t("¿Desinstalar " + l.size() + " apps?", "Uninstall " + l.size() + " apps?"))
+                .setMessage(l.size() == 1 ? Idioma.t("Se quitarán la app y sus datos.", "The app and its data will be removed.") : Idioma.t("Se quitarán las apps y sus datos.", "The apps and their data will be removed."))
+                .setNegativeButton(Idioma.t("Cancelar", "Cancel"), null)
+                .setPositiveButton(Idioma.t("Desinstalar", "Uninstall"), (dlg, w) -> {
                     for (App a : l) {
                         View v = getWindow().getDecorView().findViewWithTag(clave(a));
                         if (v != null) v.animate().scaleX(.3f).scaleY(.3f).alpha(0f).setDuration(200).setInterpolator(ACELERA).withLayer();
@@ -835,7 +837,7 @@ public class Inicio extends Activity {
         try {
             startActivity(new Intent(accion, Uri.fromParts("package", a.pkg, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (ActivityNotFoundException | SecurityException e) {
-            Toast.makeText(this, "No se pudo abrir la acción para " + a.nombre, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, Idioma.t("No se pudo abrir la acción para ", "Couldn't open this action for ") + a.nombre, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -886,9 +888,9 @@ public class Inicio extends Activity {
     void crearCarpeta(List<App> dentroDe, App lugar, boolean enCajon) {
         String nombre = carpetaDe(lugar);
         if (nombre == null) {
-            nombre = "Nueva carpeta";
+            nombre = Idioma.t("Nueva carpeta", "New folder");
             Map<String, List<String>> cs = carpetas();
-            for (int i = 2; cs.containsKey(nombre); i++) nombre = "Nueva carpeta " + i;
+            for (int i = 2; cs.containsKey(nombre); i++) nombre = Idioma.t("Nueva carpeta ", "New folder ") + i;
             // La carpeta nueva ocupa el lugar de la app sobre la que se soltó (no salta al final).
             String pref = enCajon ? "orden_cajon" : "orden";
             List<String> ids = new ArrayList<>();
@@ -920,7 +922,7 @@ public class Inicio extends Activity {
         nom.setPadding(dp(44), 0, dp(44), 0);
         cab.addView(nom, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36), Gravity.CENTER));
         ImageView info = iconoBoton("ic_info_outline_24", 36, x -> { cerrar.run(); accionApp(a, Settings.ACTION_APPLICATION_DETAILS_SETTINGS); });
-        info.setContentDescription("Información de la app");
+        info.setContentDescription(Idioma.t("Información de la app", "App info"));
         cab.addView(info, new FrameLayout.LayoutParams(dp(36), dp(36), Gravity.END | Gravity.CENTER_VERTICAL));
         t.addView(cab);
 
@@ -945,14 +947,14 @@ public class Inicio extends Activity {
             t.addView(filaMenu(ic != null ? ic : a.icono, txt, true, x -> {
                 cerrar.run();
                 try { la.startShortcut(s, null, null); }
-                catch (RuntimeException e) { Toast.makeText(this, "No se pudo abrir el atajo", Toast.LENGTH_SHORT).show(); }
+                catch (RuntimeException e) { Toast.makeText(this, Idioma.t("No se pudo abrir el atajo", "Couldn't open the shortcut"), Toast.LENGTH_SHORT).show(); }
             }));
         }
         String carpeta = carpetaDe(a);
-        if (!enCajon && carpeta != null) t.addView(filaMenu(ico("ic_menu_revert"), "Sacar de la carpeta", false, x -> { cerrar.run(); sacar(a); }));
-        t.addView(filaMenu(ico("ic_more_items"), "Abrir en pantalla dividida", false, x -> { cerrar.run(); dividir(a); }));
+        if (!enCajon && carpeta != null) t.addView(filaMenu(ico("ic_menu_revert"), Idioma.t("Sacar de la carpeta", "Remove from folder"), false, x -> { cerrar.run(); sacar(a); }));
+        t.addView(filaMenu(ico("ic_more_items"), Idioma.t("Abrir en pantalla dividida", "Open in split screen"), false, x -> { cerrar.run(); dividir(a); }));
         boolean enDock = dock().contains(a.pkg);
-        t.addView(filaMenu(ico(enDock ? "ic_menu_close_clear_cancel" : "ic_menu_add"), enDock ? "Quitar del dock" : "Fijar en el dock", false, x -> {
+        t.addView(filaMenu(ico(enDock ? "ic_menu_close_clear_cancel" : "ic_menu_add"), enDock ? Idioma.t("Quitar del dock", "Remove from dock") : Idioma.t("Fijar en el dock", "Pin to dock"), false, x -> {
             cerrar.run();
             List<String> d = dock();
             if (enDock) d.remove(a.pkg); else d.add(a.pkg);
@@ -966,16 +968,16 @@ public class Inicio extends Activity {
         lr.topMargin = lr.bottomMargin = dp(6);
         t.addView(raya, lr);
         LinearLayout pie = new LinearLayout(this);
-        pie.addView(botonMenu("ic_check_circle_24px", "Selec.", x -> { cerrar.run(); entrarSeleccion(a, enCajon); }), pesoUno());
-        if (enCajon) pie.addView(botonMenu("ic_menu_add", "Añadir a Inicio", x -> {
+        pie.addView(botonMenu("ic_check_circle_24px", Idioma.t("Selec.", "Select"), x -> { cerrar.run(); entrarSeleccion(a, enCajon); }), pesoUno());
+        if (enCajon) pie.addView(botonMenu("ic_menu_add", Idioma.t("Añadir a Inicio", "Add to Home"), x -> {
             cerrar.run();
             if (bloqueado()) return;
             ponerEnInicio(clave(a));
             refrescar();
-            Toast.makeText(this, a.nombre + " está en el inicio", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, Idioma.t(a.nombre + " está en el inicio", a.nombre + " is on the Home screen"), Toast.LENGTH_SHORT).show();
         }), pesoUno());
-        else pie.addView(botonMenu("ic_delete", "Eliminar", x -> { cerrar.run(); if (!bloqueado()) quitarDelInicio(Arrays.asList(a)); }), pesoUno());
-        if (desinstalable(a)) pie.addView(botonMenu("ic_minus", "Desinst.", x -> { cerrar.run(); desinstalar(Arrays.asList(a)); }), pesoUno());
+        else pie.addView(botonMenu("ic_delete", Idioma.t("Eliminar", "Remove"), x -> { cerrar.run(); if (!bloqueado()) quitarDelInicio(Arrays.asList(a)); }), pesoUno());
+        if (desinstalable(a)) pie.addView(botonMenu("ic_minus", Idioma.t("Desinst.", "Uninstall"), x -> { cerrar.run(); desinstalar(Arrays.asList(a)); }), pesoUno());
         if (!widgets.de(a.pkg).isEmpty()) pie.addView(botonMenu("ic_widgets", "Widgets", x -> { cerrar.run(); widgets.selector(paginaActual(), a.pkg); }), pesoUno());
         t.addView(pie);
         v[0] = mostrarVentana(t, ancla);
@@ -1070,22 +1072,22 @@ public class Inicio extends Activity {
         barraSel.setPadding(dp(8), 0, dp(8), 0);
         barraSel.setBackground(new Vidrio.Placa(barraSel, dp(26), 0xB31E1E24));
         barraSel.setElevation(dp(12));
-        barraSel.addView(pildora("ic_minus", "Desinstalar", x -> {
+        barraSel.addView(pildora("ic_minus", Idioma.t("Desinstalar", "Uninstall"), x -> {
             desinstalar(new ArrayList<>(marcadas()));
             salirSeleccion();
         }));
-        if (enCajon) barraSel.addView(pildora("ic_menu_add", "Añadir a Inicio", x -> {
+        if (enCajon) barraSel.addView(pildora("ic_menu_add", Idioma.t("Añadir a Inicio", "Add to Home"), x -> {
             if (!bloqueado()) { Set<String> s = enInicio(); for (App m : marcadas()) s.add(clave(m)); guardarEnInicio(s); }
             salirSeleccion();
             refrescar();
         }));
-        else barraSel.addView(pildora("ic_delete", "Eliminar", x -> { List<App> m = marcadas(); salirSeleccion(); if (!bloqueado()) quitarDelInicio(m); }));
-        barraSel.addView(pildora("ic_folder_24dp", "Crear carpeta", x -> {
+        else barraSel.addView(pildora("ic_delete", Idioma.t("Eliminar", "Remove"), x -> { List<App> m = marcadas(); salirSeleccion(); if (!bloqueado()) quitarDelInicio(m); }));
+        barraSel.addView(pildora("ic_folder_24dp", Idioma.t("Crear carpeta", "Create folder"), x -> {
             List<App> m = marcadas();
             salirSeleccion();
             if (m.size() >= 1 && !bloqueado()) crearCarpeta(m, m.get(0), enCajon);
         }));
-        barraSel.addView(pildora("ic_close", "Listo", x -> salirSeleccion()));
+        barraSel.addView(pildora("ic_close", Idioma.t("Listo", "Done"), x -> salirSeleccion()));
         // Abajo, sobre el dock: arriba tapaba la primera fila de iconos (17/11).
         FrameLayout.LayoutParams l = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(52), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         l.bottomMargin = dp(120);
@@ -1267,9 +1269,9 @@ public class Inicio extends Activity {
         String n = (String) o;
         rebotar(v);
         PopupMenu m = new PopupMenu(this, v);
-        m.getMenu().add(0, 1, 0, "Cambiar nombre");
-        m.getMenu().add(0, 2, 1, "Deshacer carpeta");
-        if (!enCajon) m.getMenu().add(0, 3, 2, "Quitar del inicio");
+        m.getMenu().add(0, 1, 0, Idioma.t("Cambiar nombre", "Rename"));
+        m.getMenu().add(0, 2, 1, Idioma.t("Deshacer carpeta", "Ungroup folder"));
+        if (!enCajon) m.getMenu().add(0, 3, 2, Idioma.t("Quitar del inicio", "Remove from Home"));
         m.setOnMenuItemClickListener(it -> {
             if (it.getItemId() == 1) { renombrar(n); return true; }
             if (bloqueado()) return true;
@@ -1290,8 +1292,8 @@ public class Inicio extends Activity {
         EditText e = new EditText(this);
         e.setSingleLine();
         e.setText(n);
-        new AlertDialog.Builder(this).setTitle("Nombre de la carpeta").setView(e)
-                .setPositiveButton("Aceptar", (d, i) -> {
+        new AlertDialog.Builder(this).setTitle(Idioma.t("Nombre de la carpeta", "Folder name")).setView(e)
+                .setPositiveButton(Idioma.t("Aceptar", "OK"), (d, i) -> {
                     String nuevo = e.getText().toString().trim();
                     Map<String, List<String>> cs = carpetas();
                     if (nuevo.isEmpty() || cs.containsKey(nuevo)) return;
@@ -1309,7 +1311,7 @@ public class Inicio extends Activity {
                     ed.putString("orden_c:" + nuevo, prefs.getString("orden_c:" + n, "")).remove("orden_c:" + n).apply();
                     refrescar();
                 })
-                .setNegativeButton("Cancelar", null).show();
+                .setNegativeButton(Idioma.t("Cancelar", "Cancel"), null).show();
     }
 
     void cerrarCarpeta() {
@@ -1475,7 +1477,7 @@ public class Inicio extends Activity {
         lupa.setImageDrawable(Paneles.de(this).icono("ic_search", TEXTO2));
         barra.addView(lupa, new LinearLayout.LayoutParams(dp(20), dp(20)));
         buscarCajon = new EditText(this);
-        buscarCajon.setHint("Buscar apps y ajustes");
+        buscarCajon.setHint(Idioma.t("Buscar apps y ajustes", "Search apps and settings"));
         estilo(buscarCajon, 15, false, Color.WHITE);
         buscarCajon.setHintTextColor(TEXTO3);
         buscarCajon.setSingleLine(true);
@@ -1486,7 +1488,7 @@ public class Inicio extends Activity {
         ImageView mic = iconoBoton("ic_mic", 40, v -> {
             try { startActivityForResult(new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                     .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM), PEDIR_VOZ); }
-            catch (ActivityNotFoundException e) { Toast.makeText(this, "No hay reconocimiento de voz instalado", Toast.LENGTH_SHORT).show(); }
+            catch (ActivityNotFoundException e) { Toast.makeText(this, Idioma.t("No hay reconocimiento de voz instalado", "Voice recognition isn't installed"), Toast.LENGTH_SHORT).show(); }
         });
         barra.addView(mic, new LinearLayout.LayoutParams(dp(40), dp(40)));
         LinearLayout.LayoutParams lb = new LinearLayout.LayoutParams(Math.min(dp(440), ancho), dp(52));
@@ -1496,8 +1498,8 @@ public class Inicio extends Activity {
         c.addView(col, lleno());
         ImageView mas = iconoBoton("ic_menu_moreoverflow_material", 44, v -> {
             PopupMenu m = new PopupMenu(this, v);
-            m.getMenu().add(0, 1, 0, "Ordenar de la A a la Z");
-            m.getMenu().add(0, 2, 1, "Ajustes de inicio");
+            m.getMenu().add(0, 1, 0, Idioma.t("Ordenar de la A a la Z", "Sort A to Z"));
+            m.getMenu().add(0, 2, 1, Idioma.t("Ajustes de inicio", "Home settings"));
             m.setOnMenuItemClickListener(it -> {
                 if (it.getItemId() == 1) { prefs.edit().remove("orden_cajon").apply(); refrescar(); }
                 else Hojas.ajustes(this);
@@ -1592,11 +1594,12 @@ public class Inicio extends Activity {
         if (q.isEmpty()) return;
         int n = 0;
         for (String[] a : AJUSTES) {
-            if (n == 4 || !(normalizar(a[0]).contains(q) || normalizar(a[1]).contains(q))) continue;
+            String nom = Idioma.t(a[0], a[3]);
+            if (n == 4 || !(normalizar(nom).contains(q) || normalizar(a[1]).contains(q))) continue;
             n++;
-            resultadosAjustes.addView(filaMenu(ico("ic_settings_24dp"), a[0] + "  ·  Ajustes", false, v -> abrirAjuste(a[2], null)));
+            resultadosAjustes.addView(filaMenu(ico("ic_settings_24dp"), nom + "  ·  " + Idioma.t("Ajustes", "Settings"), false, v -> abrirAjuste(a[2], null)));
         }
-        resultadosAjustes.addView(filaMenu(ico("ic_search"), "Buscar «" + texto.trim() + "» en Ajustes", false,
+        resultadosAjustes.addView(filaMenu(ico("ic_search"), Idioma.t("Buscar «" + texto.trim() + "» en Ajustes", "Search Settings for “" + texto.trim() + "”"), false,
                 v -> abrirAjuste("android.settings.APP_SEARCH_SETTINGS", texto.trim())));
     }
 
@@ -1613,32 +1616,32 @@ public class Inicio extends Activity {
         cerrarCajon();
     }
 
-    // Opciones de Ajustes que se encuentran desde el cajón: nombre, palabras clave, acción.
+    // Opciones de Ajustes que se encuentran desde el cajón: nombre, palabras clave (en los dos idiomas), acción, nombre en inglés.
     static final String[][] AJUSTES = {
-            {"Wi-Fi", "internet red inalambrica wifi", Settings.ACTION_WIFI_SETTINGS},
-            {"Bluetooth", "auriculares dispositivos conectados", Settings.ACTION_BLUETOOTH_SETTINGS},
-            {"Red e Internet", "datos movil avion vpn", Settings.ACTION_WIRELESS_SETTINGS},
-            {"Pantalla", "brillo tamano fuente resolucion tiempo de espera", Settings.ACTION_DISPLAY_SETTINGS},
-            {"Modo oscuro", "tema noche claro", "android.settings.DARK_THEME_SETTINGS"},
-            {"Fondo de pantalla y estilo", "fondo pantalla wallpaper estilo paleta", "fondo"},
-            {"Sonido y vibración", "volumen tono silencio", Settings.ACTION_SOUND_SETTINGS},
-            {"Notificaciones", "avisos alertas", "android.settings.NOTIFICATION_SETTINGS"},
-            {"No molestar", "silencio concentracion", "android.settings.ZEN_MODE_SETTINGS"},
-            {"Batería", "energia ahorro consumo carga", "android.intent.action.POWER_USAGE_SUMMARY"},
-            {"Almacenamiento", "espacio memoria archivos", Settings.ACTION_INTERNAL_STORAGE_SETTINGS},
-            {"Aplicaciones", "apps permisos predeterminadas", Settings.ACTION_APPLICATION_SETTINGS},
-            {"Ubicación", "gps localizacion", Settings.ACTION_LOCATION_SOURCE_SETTINGS},
-            {"Seguridad", "bloqueo pantalla contrasena pin huella", Settings.ACTION_SECURITY_SETTINGS},
-            {"Privacidad", "permisos datos", Settings.ACTION_PRIVACY_SETTINGS},
-            {"Cuentas", "google sincronizar usuarios", Settings.ACTION_SYNC_SETTINGS},
-            {"Accesibilidad", "lector zoom texto grande", Settings.ACTION_ACCESSIBILITY_SETTINGS},
-            {"Idioma", "idiomas region espanol", Settings.ACTION_LOCALE_SETTINGS},
-            {"Teclado", "metodo de entrada escritura", Settings.ACTION_INPUT_METHOD_SETTINGS},
-            {"Fecha y hora", "zona horaria reloj", Settings.ACTION_DATE_SETTINGS},
-            {"Acerca de la tableta", "version android informacion modelo", Settings.ACTION_DEVICE_INFO_SETTINGS},
-            {"Opciones para desarrolladores", "depuracion usb adb", Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS},
-            {"Usuarios", "perfiles invitado", "android.settings.USER_SETTINGS"},
-            {"Sistema", "actualizacion copia restablecer", "android.settings.SYSTEM_UPDATE_SETTINGS"},
+            {"Wi-Fi", "internet red inalambrica wifi network wireless", Settings.ACTION_WIFI_SETTINGS, "Wi-Fi"},
+            {"Bluetooth", "auriculares dispositivos conectados headphones connected devices", Settings.ACTION_BLUETOOTH_SETTINGS, "Bluetooth"},
+            {"Red e Internet", "datos movil avion vpn mobile data airplane", Settings.ACTION_WIRELESS_SETTINGS, "Network & internet"},
+            {"Pantalla", "brillo tamano fuente resolucion tiempo de espera brightness font size resolution timeout", Settings.ACTION_DISPLAY_SETTINGS, "Display"},
+            {"Modo oscuro", "tema noche claro night light mode", "android.settings.DARK_THEME_SETTINGS", "Dark theme"},
+            {"Fondo de pantalla y estilo", "fondo pantalla wallpaper estilo paleta background palette", "fondo", "Wallpaper & style"},
+            {"Sonido y vibración", "volumen tono silencio volume ringtone silent", Settings.ACTION_SOUND_SETTINGS, "Sound & vibration"},
+            {"Notificaciones", "avisos alertas alerts", "android.settings.NOTIFICATION_SETTINGS", "Notifications"},
+            {"No molestar", "silencio concentracion silent focus", "android.settings.ZEN_MODE_SETTINGS", "Do Not Disturb"},
+            {"Batería", "energia ahorro consumo carga power saver usage charge", "android.intent.action.POWER_USAGE_SUMMARY", "Battery"},
+            {"Almacenamiento", "espacio memoria archivos space memory files", Settings.ACTION_INTERNAL_STORAGE_SETTINGS, "Storage"},
+            {"Aplicaciones", "apps permisos predeterminadas permissions default", Settings.ACTION_APPLICATION_SETTINGS, "Apps"},
+            {"Ubicación", "gps localizacion", Settings.ACTION_LOCATION_SOURCE_SETTINGS, "Location"},
+            {"Seguridad", "bloqueo pantalla contrasena pin huella screen lock password fingerprint", Settings.ACTION_SECURITY_SETTINGS, "Security"},
+            {"Privacidad", "permisos datos permissions data", Settings.ACTION_PRIVACY_SETTINGS, "Privacy"},
+            {"Cuentas", "google sincronizar usuarios sync", Settings.ACTION_SYNC_SETTINGS, "Accounts"},
+            {"Accesibilidad", "lector zoom texto grande reader large text", Settings.ACTION_ACCESSIBILITY_SETTINGS, "Accessibility"},
+            {"Idioma", "idiomas region espanol languages english", Settings.ACTION_LOCALE_SETTINGS, "Language"},
+            {"Teclado", "metodo de entrada escritura input method typing", Settings.ACTION_INPUT_METHOD_SETTINGS, "Keyboard"},
+            {"Fecha y hora", "zona horaria reloj time zone clock", Settings.ACTION_DATE_SETTINGS, "Date & time"},
+            {"Acerca de la tableta", "version android informacion modelo information model", Settings.ACTION_DEVICE_INFO_SETTINGS, "About tablet"},
+            {"Opciones para desarrolladores", "depuracion usb adb debugging", Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, "Developer options"},
+            {"Usuarios", "perfiles invitado profiles guest", "android.settings.USER_SETTINGS", "Users"},
+            {"Sistema", "actualizacion copia restablecer update backup reset", "android.settings.SYSTEM_UPDATE_SETTINGS", "System"},
     };
 
     // ---------- hojas a pantalla completa (ajustes del inicio, fondo y estilo, selector de widgets) ----------

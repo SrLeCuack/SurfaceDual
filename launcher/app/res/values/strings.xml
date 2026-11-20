@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solo los nombres que el manifiesto enseña (el resto de textos va con Idioma.t en el código). Sin "es": inglés. -->
+<resources>
+    <string name="a_windows">Switch to Windows</string>
+    <string name="isla">Dynamic Island</string>
+</resources>

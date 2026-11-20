@@ -127,7 +127,7 @@ static partial class Bandeja
             fIcono = new Font("Segoe Fluent Icons", 16f * e, GraphicsUnit.Pixel);
             fFlecha = new Font("Segoe Fluent Icons", 12f * e, GraphicsUnit.Pixel);
 
-            Text = "Surface Dual"; AccessibleName = "Surface Dual: panel rápido";
+            Text = "Surface Dual"; AccessibleName = Idioma.T("Surface Dual: panel rápido", "Surface Dual: quick panel");
             FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.Manual; ShowInTaskbar = false; TopMost = true; KeyPreview = true;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque, true);
 
@@ -138,11 +138,11 @@ static partial class Bandeja
             int anchoFicha = (interior - 2 * px(12)) / 3, altoFicha = px(48 + 6 + 34);
             var fichas = new Pieza[]
             {
-                new Ficha(this, "Preguntar al quitar teclado", "\uE765", "Preguntar al quitar o poner el teclado si se cambia de sistema",
+                new Ficha(this, Idioma.T("Preguntar al quitar teclado", "Ask before switching"), "\uE765", Idioma.T("Preguntar al quitar o poner el teclado si se cambia de sistema", "Ask when the keyboard is detached or attached before switching systems"),
                           () => Automatico, v => Automatico = v),
-                new Ficha(this, "Apagar tras 1 h en pausa", "\uE823", "Apagar Android tras 1 hora en pausa para liberar su memoria",
+                new Ficha(this, Idioma.T("Apagar tras 1 h en pausa", "Shut down after 1 h paused"), "\uE823", Idioma.T("Apagar Android tras 1 hora en pausa para liberar su memoria", "Shut down Android after 1 hour paused to free its memory"),
                           () => AutoApagar, v => AutoApagar = v),
-                new Ficha(this, "Olvidar elecciones", "\uE72C", "Volver a preguntar aunque se marcara Recordar mi elección", null, null),
+                new Ficha(this, Idioma.T("Olvidar elecciones", "Forget choices"), "\uE72C", Idioma.T("Volver a preguntar aunque se marcara Recordar mi elección", "Ask again even if Remember my choice was selected"), null, null),
             };
             for (int i = 0; i < fichas.Length; i++) fichas[i].Bounds = new Rectangle(m + i * (anchoFicha + px(12)), y, anchoFicha, altoFicha);
             fichas[2].Enabled = Recordado("AlQuitarTeclado") != "" || Recordado("AlPonerTeclado") != "";
@@ -151,9 +151,10 @@ static partial class Bandeja
             brillo = new Deslizador(this) { Bounds = new Rectangle(m - px(4), y, interior + px(8), px(44)), Visible = false };
             y += px(44) + px(12);
             yPie = y;
-            memoria = new Etiqueta(this) { Bounds = new Rectangle(m, y, interior - px(150), px(60)) };
-            apagar = new Boton(this, "Apagar Android", "\uE7E8") { Bounds = new Rectangle(ancho - m - px(150) + px(8), y + px(8), px(150), px(44)), Enabled = false };
-            apagar.Accion = () => { Apagar(); principal.Subtitulo = "Apagando…"; apagar.Enabled = false; };
+            int wa = px(Idioma.En ? 174 : 150);   // "Shut down Android" no cabe en una línea en el ancho del español
+            memoria = new Etiqueta(this) { Bounds = new Rectangle(m, y, interior - wa, px(60)) };
+            apagar = new Boton(this, Idioma.T("Apagar Android", "Shut down Android"), "\uE7E8") { Bounds = new Rectangle(ancho - m - wa + px(8), y + px(8), wa, px(44)), Enabled = false };
+            apagar.Accion = () => { Apagar(); principal.Subtitulo = Idioma.T("Apagando…", "Shutting down…"); apagar.Enabled = false; };
             Controls.Add(principal); Controls.AddRange(fichas); Controls.Add(brillo); Controls.Add(memoria); Controls.Add(apagar);
 
             // Encima de la barra de tareas, a la derecha y a 12 del borde, en la pantalla donde está el puntero (como Win+A).
@@ -205,11 +206,11 @@ static partial class Bandeja
         void Mostrar(EstadoAndroid est, int b)
         {
             if (IsDisposed) return;   // se cerró con la consulta en camino (revisión Gemini/Nemotron 18/11)
-            principal.Subtitulo = est == EstadoAndroid.Activo ? "Encendido · al instante"
-                                : est == EstadoAndroid.Suspendido ? "Listo · en pausa"
-                                : est == EstadoAndroid.Encendiendo ? "Encendiendo…"
-                                : "Apagado · tarda unos 35 s";
-            memoria.Text = est == EstadoAndroid.Apagado ? "Android no usa memoria" : "Android usa 12 GB";
+            principal.Subtitulo = est == EstadoAndroid.Activo ? Idioma.T("Encendido · al instante", "On · instant")
+                                : est == EstadoAndroid.Suspendido ? Idioma.T("Listo · en pausa", "Ready · paused")
+                                : est == EstadoAndroid.Encendiendo ? Idioma.T("Encendiendo…", "Starting…")
+                                : Idioma.T("Apagado · tarda unos 35 s", "Off · takes about 35 s");
+            memoria.Text = est == EstadoAndroid.Apagado ? Idioma.T("Android no usa memoria", "Android uses no memory") : Idioma.T("Android usa 12 GB", "Android uses 12 GB");
             apagar.Enabled = est != EstadoAndroid.Apagado;
             if (b >= 0) { brillo.Nivel = b; brillo.Visible = true; }
             memoria.Invalidate();
@@ -324,7 +325,7 @@ static partial class Bandeja
                 get { var s = base.State; if (c.Marcada == true) s |= AccessibleStates.Checked; return s; }
             }
             public override string Value { get { return c.Valor ?? base.Value; } }
-            public override string DefaultAction { get { return c.Marcada == null ? "Pulsar" : "Alternar"; } }
+            public override string DefaultAction { get { return c.Marcada == null ? Idioma.T("Pulsar", "Press") : Idioma.T("Alternar", "Toggle"); } }
             public override void DoDefaultAction() { if (c.Enabled) c.Pulsar(); }
         }
     }
@@ -333,7 +334,7 @@ static partial class Bandeja
     sealed class Principal : Pieza
     {
         string subtitulo = "";
-        public Principal(PanelRapido p) : base(p, "Ir a Android", AccessibleRole.PushButton) { Accion = p.IrAAndroid; }
+        public Principal(PanelRapido p) : base(p, Idioma.T("Ir a Android", "Go to Android"), AccessibleRole.PushButton) { Accion = p.IrAAndroid; }
         public string Subtitulo { set { subtitulo = value; AccessibleDescription = value; Invalidate(); } }
         protected override void Dibujar(Graphics g)
         {
@@ -343,7 +344,7 @@ static partial class Bandeja
             using (var b = new SolidBrush(Color.FromArgb(0x3D, 0xDC, 0x84))) g.FillEllipse(b, x, y, s, s);   // verde Android
             Robot(g, x + s * 0.2f, y + s * 0.22f, s * 0.6f);
             float tx = x + s + p.px(14), ancho = Width - tx - p.px(40);
-            PanelRapido.Centrado(g, "Ir a Android", p.fTitulo, p.sobreAcento, new RectangleF(tx, Height / 2f - p.px(22), ancho, p.px(24)), StringAlignment.Near);
+            PanelRapido.Centrado(g, Text, p.fTitulo, p.sobreAcento, new RectangleF(tx, Height / 2f - p.px(22), ancho, p.px(24)), StringAlignment.Near);
             PanelRapido.Centrado(g, subtitulo, p.fPequena, Color.FromArgb(0xD0, p.sobreAcento), new RectangleF(tx, Height / 2f + p.px(1), ancho, p.px(20)), StringAlignment.Near);
             PanelRapido.Centrado(g, "\uE76C", new Font(p.fIcono.FontFamily, p.fIcono.Size * 0.75f, GraphicsUnit.Pixel), p.sobreAcento,
                            new RectangleF(Width - p.px(40), 0, p.px(28), Height));   // flecha ›
@@ -422,7 +423,7 @@ static partial class Bandeja
     sealed class Deslizador : Pieza
     {
         int valor;
-        public Deslizador(PanelRapido p) : base(p, "Brillo", AccessibleRole.Slider) { }
+        public Deslizador(PanelRapido p) : base(p, Idioma.T("Brillo", "Brightness"), AccessibleRole.Slider) { }
         public int Nivel { get { return valor; } set { valor = Math.Max(0, Math.Min(100, value)); Invalidate(); } }
         public override string Valor { get { return valor + " %"; } }
         float X0 { get { return p.px(48); } }

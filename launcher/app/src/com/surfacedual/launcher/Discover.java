@@ -199,7 +199,7 @@ class Discover {
         cab.addView(g, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView buscar = new TextView(ini);
         ini.estilo(buscar, 15, false, Inicio.TEXTO2);
-        buscar.setText("Buscar en Google");
+        buscar.setText(Idioma.t("Buscar en Google", "Search Google"));
         buscar.setGravity(Gravity.CENTER_VERTICAL);
         buscar.setPadding(ini.dp(20), 0, ini.dp(40), 0);
         buscar.setBackground(ini.fondo(0xFF202124, 0x26FFFFFF, 24));
@@ -207,8 +207,8 @@ class Discover {
         cab.addView(buscar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ini.dp(48)));
         col.addView(cab);
         LinearLayout chips = new LinearLayout(ini);
-        chips.addView(chip(new SimpleDateFormat("EEEE d 'de' MMMM", new Locale("es")).format(new java.util.Date()), "Hoy"));
-        chips.addView(chip("Noticias destacadas", "Google Noticias · " + region()[1]));
+        chips.addView(chip(new SimpleDateFormat(Idioma.t("EEEE d 'de' MMMM", "EEEE, MMMM d"), Locale.getDefault()).format(new java.util.Date()), Idioma.t("Hoy", "Today")));
+        chips.addView(chip(Idioma.t("Noticias destacadas", "Top stories"), Idioma.t("Google Noticias · ", "Google News · ") + region()[1]));
         LinearLayout.LayoutParams lch = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lch.topMargin = ini.dp(20);
         col.addView(chips, lch);
@@ -260,7 +260,7 @@ class Discover {
     void visible() {
         if (System.currentTimeMillis() - cargadas < 20 * 60_000 || cargando) return;
         cargando = true;
-        File cache = new File(ini.getFilesDir(), "discover.xml");
+        File cache = new File(ini.getFilesDir(), "discover-" + Locale.getDefault().toLanguageTag() + ".xml");   // por idioma: sin red no salen titulares del idioma anterior
         new Thread(() -> {
             List<Noticia> l = null;
             if (noticias.isEmpty() && cache.exists()) try (InputStream in = new FileInputStream(cache)) { l = leer(in); } catch (Exception ignored) { }
@@ -277,7 +277,7 @@ class Discover {
                 Vidrio.principal.post(() -> { noticias.clear(); noticias.addAll(nuevas); cargadas = System.currentTimeMillis(); cargando = false; pintar(); });
             } catch (Exception e) {
                 Log.w(TAG, "noticias: " + e);
-                Vidrio.principal.post(() -> { cargando = false; if (noticias.isEmpty() && aviso != null) aviso.setText("Sin conexión: no se pudieron cargar las noticias."); });
+                Vidrio.principal.post(() -> { cargando = false; if (noticias.isEmpty() && aviso != null) aviso.setText(Idioma.t("Sin conexión: no se pudieron cargar las noticias.", "No connection: couldn't load the news.")); });
             }
         }).start();
     }
@@ -321,7 +321,7 @@ class Discover {
     void pintar() {
         if (columnas == null) return;
         for (LinearLayout c : columnas) c.removeAllViews();
-        if (aviso != null) aviso.setText(noticias.isEmpty() ? "Cargando noticias…" : "");
+        if (aviso != null) aviso.setText(noticias.isEmpty() ? Idioma.t("Cargando noticias…", "Loading news…") : "");
         int[] alto = new int[2];
         long ahora = System.currentTimeMillis();
         for (Noticia n : noticias) {
@@ -340,7 +340,7 @@ class Discover {
             LinearLayout pie = new LinearLayout(ini);
             pie.setGravity(Gravity.CENTER_VERTICAL);
             pie.setPadding(0, ini.dp(14), 0, 0);
-            String fuente = n.fuente == null || n.fuente.trim().isEmpty() ? "Google Noticias" : n.fuente.trim();
+            String fuente = n.fuente == null || n.fuente.trim().isEmpty() ? Idioma.t("Google Noticias", "Google News") : n.fuente.trim();
             TextView letra = new TextView(ini);
             ini.estilo(letra, 11, true, Color.WHITE);
             letra.setText(fuente.substring(0, 1).toUpperCase(Locale.ROOT));
@@ -360,7 +360,7 @@ class Discover {
             pie.addView(src, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
             TextView compartir = new TextView(ini);
             ini.estilo(compartir, 13, true, Inicio.ACENTO);
-            compartir.setText("Compartir");
+            compartir.setText(Idioma.t("Compartir", "Share"));
             compartir.setPadding(ini.dp(8), ini.dp(6), ini.dp(4), ini.dp(6));
             compartir.setOnClickListener(v -> abrirIntent(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain")
                     .putExtra(Intent.EXTRA_TEXT, n.titulo + "\n" + n.enlace), null)));
@@ -382,6 +382,6 @@ class Discover {
 
     void abrirIntent(Intent i) {
         try { ini.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
-        catch (ActivityNotFoundException e) { android.widget.Toast.makeText(ini, "No hay app para abrirlo", android.widget.Toast.LENGTH_SHORT).show(); }
+        catch (ActivityNotFoundException e) { android.widget.Toast.makeText(ini, Idioma.t("No hay app para abrirlo", "No app can open this"), android.widget.Toast.LENGTH_SHORT).show(); }
     }
 }

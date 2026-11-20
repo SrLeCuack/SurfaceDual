@@ -47,12 +47,14 @@ En esta prueba de lectura, Android gastó **un 38 % menos** que Edge en Windows.
 ## Instalación
 
 1. Descarga el `.zip` de la última versión en [Releases](../../releases) y descomprímelo.
-2. Doble clic en `instalador\Instalar.cmd`. Primero comprueba tu equipo y pide permiso antes de cambiar nada.
+2. Doble clic en `instalador\Instalar.cmd` y elige el idioma: `1` = Español (`2` = inglés). Primero comprueba tu equipo
+   y pide permiso antes de cambiar nada.
 3. Si todo sale "bien", escribe `SI` para instalar y acepta el aviso de Windows (UAC).
 4. Espera. El paso más largo es armar Android: cerca de una hora (estimado; depende de tu Internet). Al final, reinicia Windows una vez.
 5. Quita el teclado (o abre "Android (Surface Dual)" en el menú Inicio), abre Play Store e inicia sesión con tu cuenta de Google.
 
-El instalador está en español y se instala en `C:\SurfaceDual`. Si se corta, vuelve a abrir `Instalar.cmd` y sigue
+El instalador, Android y los programas de Surface Dual (icono de la bandeja, visor, pantalla de inicio, ajustes rápidos)
+usan el idioma que elijas. Se instala en `C:\SurfaceDual`. Si se corta, vuelve a abrir `Instalar.cmd` y sigue
 donde se quedó.
 
 **Desinstalar:** doble clic en `instalador\Desinstalar.cmd`. Deshace lo que hizo el instalador, con el estado de Windows que anotó antes de instalar.

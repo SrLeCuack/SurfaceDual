@@ -42,39 +42,39 @@ final class Hojas {
         boolean vertical = ini.getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT;
 
         LinearLayout g1 = grupo(ini, c);
-        TextView tam = titulo(ini, "Tamaño de los iconos en el inicio y el cajón");
+        TextView tam = titulo(ini, Idioma.t("Tamaño de los iconos en el inicio y el cajón", "Icon size on the Home screen and app drawer"));
         tam.setPadding(ini.dp(20), ini.dp(16), ini.dp(20), 0);
         g1.addView(tam);
         g1.addView(new Paneles.Deslizador(ini, ini.ico("ic_apps"), (ini.icono() - 48) / 32f, v -> {
             ini.prefs.edit().putInt("icono", 48 + Math.round(v * 32)).apply();
             ini.rehacerAlCerrar = true;
         }), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ini.dp(56)));
-        g1.addView(interruptorFila(ini, "Mostrar los nombres de las apps en el inicio", null, "etiquetas", true, () -> ini.notificarRejillas()));
+        g1.addView(interruptorFila(ini, Idioma.t("Mostrar los nombres de las apps en el inicio", "Show app names on the Home screen"), null, "etiquetas", true, () -> ini.notificarRejillas()));
 
         LinearLayout g2 = grupo(ini, c);
-        g2.addView(cicloFila(ini, "Cuadrícula de la pantalla de inicio", "columnas", vertical ? 4 : 6, 3, 10));
-        g2.addView(cicloFila(ini, "Cuadrícula del cajón de apps", "columnas_cajon", vertical ? 5 : 8, 4, 12));
+        g2.addView(cicloFila(ini, Idioma.t("Cuadrícula de la pantalla de inicio", "Home screen grid"), "columnas", vertical ? 4 : 6, 3, 10));
+        g2.addView(cicloFila(ini, Idioma.t("Cuadrícula del cajón de apps", "App drawer grid"), "columnas_cajon", vertical ? 5 : 8, 4, 12));
 
         LinearLayout g3 = grupo(ini, c);
-        g3.addView(interruptorFila(ini, "Añadir página de medios al inicio", "Google Discover", "discover", true, () -> ini.rehacerAlCerrar = true));
-        g3.addView(interruptorFila(ini, "Usar el Discover de Google", "Necesita tu cuenta de Google en Android; si no, noticias de Google Noticias",
+        g3.addView(interruptorFila(ini, Idioma.t("Añadir página de medios al inicio", "Add media page to Home screen"), "Google Discover", "discover", true, () -> ini.rehacerAlCerrar = true));
+        g3.addView(interruptorFila(ini, Idioma.t("Usar el Discover de Google", "Use Google Discover"), Idioma.t("Necesita tu cuenta de Google en Android; si no, noticias de Google Noticias", "Needs your Google account on Android; otherwise, headlines from Google News"),
                 "discover_google", true, () -> {
             ini.rehacerAlCerrar = true;
             if (ini.discover.usarGoogle()) ini.discover.alIniciar(); else ini.discover.cerrar();
         }));
-        g3.addView(interruptorFila(ini, "Mostrar apps recientes en el dock", "Hasta 3 apps", "dock_recientes", false, () -> ini.rehacerAlCerrar = true));
-        g3.addView(interruptorFila(ini, "Bloquear el diseño del inicio", "Evita que se quiten o muevan iconos, widgets y páginas.", "bloqueo", false, null));
-        g3.addView(interruptorFila(ini, "Puntos de notificación en los iconos", null, "puntos", true, () -> ini.notificarRejillas()));
-        g3.addView(interruptorFila(ini, "Deslizar hacia abajo para las notificaciones", "En cualquier parte vacía del inicio", "deslizar_noti", true, null));
-        g3.addView(interruptorFila(ini, "Tocar dos veces para apagar la pantalla", null, "doble_toque", true, null));
-        g3.addView(interruptorFila(ini, "Paneles Edge", "Asa en el borde derecho con tus apps favoritas (mantenla para moverla)", "edge", true,
+        g3.addView(interruptorFila(ini, Idioma.t("Mostrar apps recientes en el dock", "Show recent apps in the dock"), Idioma.t("Hasta 3 apps", "Up to 3 apps"), "dock_recientes", false, () -> ini.rehacerAlCerrar = true));
+        g3.addView(interruptorFila(ini, Idioma.t("Bloquear el diseño del inicio", "Lock Home screen layout"), Idioma.t("Evita que se quiten o muevan iconos, widgets y páginas.", "Prevents icons, widgets and pages from being removed or moved."), "bloqueo", false, null));
+        g3.addView(interruptorFila(ini, Idioma.t("Puntos de notificación en los iconos", "Notification dots on app icons"), null, "puntos", true, () -> ini.notificarRejillas()));
+        g3.addView(interruptorFila(ini, Idioma.t("Deslizar hacia abajo para las notificaciones", "Swipe down for notifications"), Idioma.t("En cualquier parte vacía del inicio", "Anywhere empty on the Home screen"), "deslizar_noti", true, null));
+        g3.addView(interruptorFila(ini, Idioma.t("Tocar dos veces para apagar la pantalla", "Double tap to turn off screen"), null, "doble_toque", true, null));
+        g3.addView(interruptorFila(ini, Idioma.t("Paneles Edge", "Edge panels"), Idioma.t("Asa en el borde derecho con tus apps favoritas (mantenla para moverla)", "Handle on the right edge with your favorite apps (hold it to move it)"), "edge", true,
                 () -> Borde.de(ini).actualizar()));
 
         LinearLayout g4 = grupo(ini, c);
         UiModeManager um = ini.getSystemService(UiModeManager.class);
         boolean oscuro = um != null && um.getNightMode() != UiModeManager.MODE_NIGHT_NO;
         View[] interruptor = new View[1];
-        LinearLayout tema = fila(ini, "Tema oscuro", "Android y sus apps (Ajustes incluido)", null);
+        LinearLayout tema = fila(ini, Idioma.t("Tema oscuro", "Dark theme"), Idioma.t("Android y sus apps (Ajustes incluido)", "Android and its apps, including Settings"), null);
         interruptor[0] = interruptor(ini, oscuro);
         tema.addView(interruptor[0], new LinearLayout.LayoutParams(ini.dp(44), ini.dp(26)));
         boolean[] estado = {oscuro};
@@ -83,17 +83,18 @@ final class Hojas {
             Inicio.peticionAgente(ini, "tema " + (nuevo ? "oscuro" : "claro"), r -> {
                 estado[0] = nuevo;
                 ponerInterruptor(ini, interruptor[0], nuevo);
-            }, () -> Toast.makeText(ini, "Cambiar el tema necesita el agente del sistema", Toast.LENGTH_SHORT).show());
+            }, () -> Toast.makeText(ini, Idioma.t("Cambiar el tema necesita el agente del sistema", "Changing the theme needs the system agent"), Toast.LENGTH_SHORT).show());
         });
         g4.addView(tema);
-        g4.addView(fila(ini, "Fondo de pantalla y estilo", null, v -> fondo(ini)));
+        g4.addView(fila(ini, Idioma.t("Fondo de pantalla y estilo", "Wallpaper & style"), null, v -> fondo(ini)));
 
         TextView ver = new TextView(ini);
         ini.estilo(ver, 13, false, Inicio.TEXTO3);
-        ver.setText("Surface Dual Launcher · gestos: deslizar de lado = páginas · hacia arriba = cajón · pellizcar = editar");
+        ver.setText(Idioma.t("Surface Dual Launcher · gestos: deslizar de lado = páginas · hacia arriba = cajón · pellizcar = editar",
+                "Surface Dual Launcher · gestures: swipe sideways = pages · swipe up = app drawer · pinch = edit"));
         ver.setPadding(ini.dp(20), ini.dp(16), ini.dp(20), 0);
         c.addView(ver);
-        ini.abrirHoja("Ajustes de la pantalla de inicio", c, true);
+        ini.abrirHoja(Idioma.t("Ajustes de la pantalla de inicio", "Home screen settings"), c, true);
     }
 
     static LinearLayout columna(Inicio ini) {
@@ -157,12 +158,12 @@ final class Hojas {
 
     /** Fila que recorre valores (columnas de la cuadrícula) a cada toque. */
     static View cicloFila(Inicio ini, String titulo, String pref, int omision, int min, int max) {
-        LinearLayout f = fila(ini, titulo, ini.prefs.getInt(pref, omision) + " columnas", null);
+        LinearLayout f = fila(ini, titulo, ini.prefs.getInt(pref, omision) + Idioma.t(" columnas", " columns"), null);
         f.setOnClickListener(v -> {
             int n = ini.prefs.getInt(pref, omision) + 1;
             if (n > max) n = min;
             ini.prefs.edit().putInt(pref, n).apply();
-            ((TextView) f.findViewWithTag("sub")).setText(n + " columnas");
+            ((TextView) f.findViewWithTag("sub")).setText(n + Idioma.t(" columnas", " columns"));
             ini.rehacerAlCerrar = true;
         });
         return f;
@@ -211,17 +212,17 @@ final class Hojas {
         c.addView(previas, lp);
 
         LinearLayout g1 = grupo(ini, c);
-        g1.addView(fila(ini, "Cambiar fondos de pantalla", null, v -> galeria(ini)));
+        g1.addView(fila(ini, Idioma.t("Cambiar fondos de pantalla", "Change wallpapers"), null, v -> galeria(ini)));
         LinearLayout g2 = grupo(ini, c);
-        LinearLayout paleta = fila(ini, "Paleta de colores", "Colores tomados de tu fondo de pantalla", v -> {
+        LinearLayout paleta = fila(ini, Idioma.t("Paleta de colores", "Color palette"), Idioma.t("Colores tomados de tu fondo de pantalla", "Colors from your wallpaper"), v -> {
             try { ini.startActivity(new Intent(Intent.ACTION_SET_WALLPAPER).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
-            catch (ActivityNotFoundException e) { Toast.makeText(ini, "No hay app de estilo en el sistema", Toast.LENGTH_SHORT).show(); }
+            catch (ActivityNotFoundException e) { Toast.makeText(ini, Idioma.t("No hay app de estilo en el sistema", "No style app on this system"), Toast.LENGTH_SHORT).show(); }
         });
         paleta.addView(muestras(ini));
         g2.addView(paleta);
         LinearLayout g3 = grupo(ini, c);
-        g3.addView(interruptorFila(ini, "Atenuar el fondo de pantalla con el modo oscuro", null, "atenuar", true, ini::atenuar));
-        ini.abrirHoja("Fondo de pantalla y estilo", c, true);
+        g3.addView(interruptorFila(ini, Idioma.t("Atenuar el fondo de pantalla con el modo oscuro", "Dim wallpaper with dark theme"), null, "atenuar", true, ini::atenuar));
+        ini.abrirHoja(Idioma.t("Fondo de pantalla y estilo", "Wallpaper & style"), c, true);
     }
 
     /** Vista previa del bloqueo (con la hora) o del inicio (con el dock), sobre la copia reducida del fondo. */
@@ -292,7 +293,7 @@ final class Hojas {
     static void galeria(Inicio ini) {
         LinearLayout c = columna(ini);
         LinearLayout destinos = new LinearLayout(ini);
-        String[] nombres = {"Inicio y bloqueo", "Inicio", "Pantalla de bloqueo"};
+        String[] nombres = {Idioma.t("Inicio y bloqueo", "Home and lock screens"), Idioma.t("Inicio", "Home screen"), Idioma.t("Pantalla de bloqueo", "Lock screen")};
         int[] valores = {WallpaperManager.FLAG_SYSTEM | WallpaperManager.FLAG_LOCK, WallpaperManager.FLAG_SYSTEM, WallpaperManager.FLAG_LOCK};
         List<TextView> pastillas = new ArrayList<>();
         for (int k = 0; k < 3; k++) {
@@ -311,16 +312,16 @@ final class Hojas {
         }
         c.addView(destinos);
         LinearLayout g = grupo(ini, c);
-        g.addView(fila(ini, "Elegir de Fotos", "Selector de fotos del sistema (sin permisos)", v -> {
+        g.addView(fila(ini, Idioma.t("Elegir de Fotos", "Choose from Photos"), Idioma.t("Selector de fotos del sistema (sin permisos)", "System photo picker (no permissions)"), v -> {
             try { ini.startActivityForResult(new Intent(MediaStore.ACTION_PICK_IMAGES).setType("image/*"), PEDIR_IMAGEN); }
             catch (ActivityNotFoundException e) {
                 try { ini.startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), PEDIR_IMAGEN); }
-                catch (ActivityNotFoundException e2) { Toast.makeText(ini, "No hay selector de imágenes", Toast.LENGTH_SHORT).show(); }
+                catch (ActivityNotFoundException e2) { Toast.makeText(ini, Idioma.t("No hay selector de imágenes", "No image picker available"), Toast.LENGTH_SHORT).show(); }
             }
         }));
-        g.addView(fila(ini, "Fondos del sistema", "Fondo y estilo de Android", v -> {
-            try { ini.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER), "Fondo de pantalla").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
-            catch (ActivityNotFoundException e) { Toast.makeText(ini, "No hay selector de fondos en el sistema", Toast.LENGTH_SHORT).show(); }
+        g.addView(fila(ini, Idioma.t("Fondos del sistema", "System wallpapers"), Idioma.t("Fondo y estilo de Android", "Android wallpaper & style"), v -> {
+            try { ini.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER), Idioma.t("Fondo de pantalla", "Wallpaper")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+            catch (ActivityNotFoundException e) { Toast.makeText(ini, Idioma.t("No hay selector de fondos en el sistema", "No wallpaper picker on this system"), Toast.LENGTH_SHORT).show(); }
         }));
         // shortcut: se listan en el hilo principal (pocas carpetas, sin subcarpetas); pasarlo a un hilo si hay miles de fotos.
         List<File> imagenes = new ArrayList<>();
@@ -330,7 +331,7 @@ final class Hojas {
         }
         imagenes.sort((a, b) -> Long.compare(b.lastModified(), a.lastModified()));
         if (!imagenes.isEmpty()) {
-            TextView t = titulo(ini, "Tus imágenes");
+            TextView t = titulo(ini, Idioma.t("Tus imágenes", "Your images"));
             t.setPadding(ini.dp(4), ini.dp(24), 0, ini.dp(8));
             c.addView(t);
             GridLayout rejilla = new GridLayout(ini);
@@ -360,7 +361,7 @@ final class Hojas {
             }
             c.addView(rejilla);
         }
-        ini.abrirHoja("Cambiar fondos de pantalla", c, true);
+        ini.abrirHoja(Idioma.t("Cambiar fondos de pantalla", "Change wallpapers"), c, true);
     }
 
     static void marcarPastilla(Inicio ini, TextView p, boolean on) {
@@ -377,7 +378,7 @@ final class Hojas {
 
     /** Pone la imagen como fondo (en otro hilo) y rehace el vidrio con ella misma, sin leer el fondo del sistema. */
     static void aplicar(Inicio ini, Fuente f) {
-        Toast.makeText(ini, "Poniendo el fondo…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(ini, Idioma.t("Poniendo el fondo…", "Setting wallpaper…"), Toast.LENGTH_SHORT).show();
         int donde = destino;
         Vidrio.hilo.execute(() -> {
             try {
@@ -389,9 +390,9 @@ final class Hojas {
                     try (InputStream in = f.abrir()) { b = BitmapFactory.decodeStream(in, null, o); }
                     if (b != null) Vidrio.calcular(ini.getApplicationContext(), b);
                 }
-                Vidrio.principal.post(() -> { ini.cerrarHoja(); Toast.makeText(ini, "Fondo de pantalla cambiado", Toast.LENGTH_SHORT).show(); });
+                Vidrio.principal.post(() -> { ini.cerrarHoja(); Toast.makeText(ini, Idioma.t("Fondo de pantalla cambiado", "Wallpaper changed"), Toast.LENGTH_SHORT).show(); });
             } catch (Exception e) {
-                Vidrio.principal.post(() -> Toast.makeText(ini, "No se pudo poner ese fondo", Toast.LENGTH_SHORT).show());
+                Vidrio.principal.post(() -> Toast.makeText(ini, Idioma.t("No se pudo poner ese fondo", "Couldn't set that wallpaper"), Toast.LENGTH_SHORT).show());
             }
         });
     }

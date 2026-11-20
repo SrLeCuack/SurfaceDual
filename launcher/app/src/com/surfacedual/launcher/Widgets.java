@@ -144,7 +144,7 @@ class Widgets {
                     TextView t = new TextView(ini);
                     ini.estilo(t, 14, false, Inicio.TEXTO2);
                     t.setGravity(Gravity.CENTER);
-                    t.setText("Widget no disponible (mantén pulsado para quitarlo)");
+                    t.setText(Idioma.t("Widget no disponible (mantén pulsado para quitarlo)", "Widget unavailable (touch and hold to remove)"));
                     t.setBackground(ini.fondo(Inicio.TARJETA, Inicio.BORDE, 24));
                     marco.addView(t, Inicio.lleno());
                 }
@@ -216,11 +216,11 @@ class Widgets {
     void menu(View ancla, int id, int pagina) {
         List<List<Integer>> p = paginas();
         PopupMenu m = new PopupMenu(ini, ancla);
-        m.getMenu().add(0, 1, 0, "Quitar");
-        m.getMenu().add(0, 2, 1, "Subir");
-        m.getMenu().add(0, 3, 2, "Bajar");
-        if (pagina > 0) m.getMenu().add(0, 4, 3, "Mover a la página anterior");
-        m.getMenu().add(0, 5, 4, pagina < p.size() - 1 ? "Mover a la página siguiente" : "Mover a una página nueva");
+        m.getMenu().add(0, 1, 0, Idioma.t("Quitar", "Remove"));
+        m.getMenu().add(0, 2, 1, Idioma.t("Subir", "Move up"));
+        m.getMenu().add(0, 3, 2, Idioma.t("Bajar", "Move down"));
+        if (pagina > 0) m.getMenu().add(0, 4, 3, Idioma.t("Mover a la página anterior", "Move to previous page"));
+        m.getMenu().add(0, 5, 4, pagina < p.size() - 1 ? Idioma.t("Mover a la página siguiente", "Move to next page") : Idioma.t("Mover a una página nueva", "Move to new page"));
         m.setOnMenuItemClickListener(it -> {
             if (ini.bloqueado()) return true;
             int k = it.getItemId();
@@ -285,7 +285,7 @@ class Widgets {
         cont.setOrientation(LinearLayout.VERTICAL);
         cont.setPadding(0, ini.dp(8), 0, ini.dp(24));
         EditText buscar = new EditText(ini);
-        buscar.setHint("Buscar");
+        buscar.setHint(Idioma.t("Buscar", "Search"));
         ini.estilo(buscar, 15, false, Color.WHITE);
         buscar.setHintTextColor(Inicio.TEXTO3);
         buscar.setSingleLine(true);
@@ -331,7 +331,7 @@ class Widgets {
                 List<AppWidgetProviderInfo> ws = new ArrayList<>();
                 for (AppWidgetProviderInfo i : e.getValue())
                     if (q.isEmpty() || Inicio.normalizar(nombre).contains(q) || Inicio.normalizar(i.loadLabel(pm)).contains(q)) ws.add(i);
-                if (propio ? !(q.isEmpty() || "reloj surface dual".contains(q)) : ws.isEmpty()) continue;
+                if (propio ? !(q.isEmpty() || (Idioma.t("reloj", "clock") + " surface dual").contains(q)) : ws.isEmpty()) continue;
                 LinearLayout f = new LinearLayout(ini);
                 f.setGravity(Gravity.CENTER_VERTICAL);
                 f.setPadding(ini.dp(12), 0, ini.dp(16), 0);
@@ -376,7 +376,7 @@ class Widgets {
         if (ws == null) {
             View r = ini.reloj();
             r.setScaleX(.6f); r.setScaleY(.6f);
-            previas.addView(previa(r, "Reloj y fecha", v -> agregarPropio(pagina)));
+            previas.addView(previa(r, Idioma.t("Reloj y fecha", "Clock and date"), v -> agregarPropio(pagina)));
             return;
         }
         int dpi = ini.getResources().getDisplayMetrics().densityDpi;
@@ -449,7 +449,7 @@ class Widgets {
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider), PEDIR_ENLACE);
         } catch (ActivityNotFoundException | SecurityException e) {
             descartarPendiente();
-            Toast.makeText(ini, "El sistema no permite agregar este widget", Toast.LENGTH_SHORT).show();
+            Toast.makeText(ini, Idioma.t("El sistema no permite agregar este widget", "The system doesn't allow adding this widget"), Toast.LENGTH_SHORT).show();
         }
     }
 

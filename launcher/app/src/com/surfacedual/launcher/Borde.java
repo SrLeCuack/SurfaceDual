@@ -142,7 +142,7 @@ class Borde {
                 return super.onTouchEvent(e);
             }
         };
-        v.setContentDescription("Panel Edge");
+        v.setContentDescription(Idioma.t("Panel Edge", "Edge panel"));
         try { wm.addView(v, lpAsa); asa = v; } catch (RuntimeException e) { asa = null; }
     }
 
@@ -392,10 +392,10 @@ class Borde {
         LinearLayout cab = p.fila();
         LinearLayout titulos = new LinearLayout(ctx);
         titulos.setOrientation(LinearLayout.VERTICAL);
-        titulos.addView(p.texto("Aplic.", 24, true, Inicio.ACENTO));
-        titulos.addView(p.texto(elegidas.size() + " añadida(s) · toca o arrastra para añadir", 13, false, Inicio.TEXTO2));
+        titulos.addView(p.texto(Idioma.t("Aplic.", "Apps"), 24, true, Inicio.ACENTO));
+        titulos.addView(p.texto(elegidas.size() + Idioma.t(" añadida(s) · toca o arrastra para añadir", " added · tap or drag to add"), 13, false, Inicio.TEXTO2));
         cab.addView(titulos, p.peso());
-        TextView listo = p.pastilla("Listo");
+        TextView listo = p.pastilla(Idioma.t("Listo", "Done"));
         listo.setOnClickListener(v -> cerrarEditor());
         cab.addView(listo);
         izq.addView(cab);

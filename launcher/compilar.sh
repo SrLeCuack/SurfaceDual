@@ -11,7 +11,9 @@ export JAVA_HOME=$(cygpath -w "$JDK"); export PATH="$JDK/bin:$PATH"
 
 javac -encoding UTF-8 --release 17 -Xlint:-options -cp "$AJ" -d $B/clases $(find $APP/src -name '*.java')
 cmd //c "$(cygpath -w $BT/d8.bat)" --release --min-api 34 --lib "$(cygpath -w $AJ)" --output "$(cygpath -w $B/dex)" $(find $B/clases -name '*.class' -exec cygpath -w {} \;)
-"$BT/aapt2.exe" link -o $B/base.apk --manifest $APP/AndroidManifest.xml -I "$AJ" --min-sdk-version 34 --target-sdk-version 36
+R=$(find $APP/res -name '*.xml' 2>/dev/null) || true   # textos del manifiesto en dos idiomas (solo el launcher tiene res/)
+[ -z "$R" ] || { mkdir $B/res; "$BT/aapt2.exe" compile -o $B/res $(cygpath -w $R); }   # aapt2 en Windows solo entiende rutas con "\"
+"$BT/aapt2.exe" link -o $B/base.apk $(ls $B/res/*.flat 2>/dev/null) --manifest $APP/AndroidManifest.xml -I "$AJ" --min-sdk-version 34 --target-sdk-version 36
 (cd $B/dex && jar -uf ../base.apk classes.dex)   # jar del JDK añade el dex al zip
 [ ! -d $APP/assets ] || (cd $APP && jar -uf ../$B/base.apk assets)   # assets con jar: aapt2 -A guarda las rutas con "\" en Windows y el sistema no las encuentra
 "$BT/zipalign.exe" -f -p 4 $B/base.apk $B/alineado.apk

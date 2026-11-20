@@ -377,13 +377,13 @@ class Paneles {
         estilo(hora, 26, true, Color.WHITE);
         cab.addView(hora);
         TextClock fecha = new TextClock(ctx);
-        fecha.setFormat12Hour("EEE d 'de' MMM");
-        fecha.setFormat24Hour("EEE d 'de' MMM");
+        fecha.setFormat12Hour(Idioma.t("EEE d 'de' MMM", "EEE, MMM d"));
+        fecha.setFormat24Hour(Idioma.t("EEE d 'de' MMM", "EEE, MMM d"));
         estilo(fecha, 14, false, TEXTO2);
         fecha.setPadding(dp(10), dp(6), 0, 0);
         cab.addView(fecha, peso());
         // shortcut: "editar" aún no abre nada (orden y elección de botones pendiente); cuando haga falta, una lista arrastrable.
-        cab.addView(botonIcono("ic_mode_edit", 40, v -> Toast.makeText(ctx, "Editar los ajustes rápidos: próximamente", Toast.LENGTH_SHORT).show()));
+        cab.addView(botonIcono("ic_mode_edit", 40, v -> Toast.makeText(ctx, Idioma.t("Editar los ajustes rápidos: próximamente", "Editing quick settings: coming soon"), Toast.LENGTH_SHORT).show()));
         cab.addView(botonIcono("ic_lock_power_off", 40, v -> {
             cerrar();
             AlertDialog d = AWindows.dialogo(ctx);
@@ -409,9 +409,9 @@ class Paneles {
         anchos.addView(bt.vista, margen(dp(10), 0, 0, 0, 1));
         t.addView(anchos);
         // Avisos de Android en Windows mientras Android está en pausa (apagado = pausa total, como siempre).
-        Interruptor avisos = new Interruptor("Avisos en Windows", "ic_notifications_alerted", true, IslaOyente.avisosWin(ctx), (on, mal) -> IslaOyente.ponerAvisosWin(ctx, on));
+        Interruptor avisos = new Interruptor(Idioma.t("Avisos en Windows", "Alerts on Windows"), "ic_notifications_alerted", true, IslaOyente.avisosWin(ctx), (on, mal) -> IslaOyente.ponerAvisosWin(ctx, on));
         // Modo lectura (ESTADO 116): el agente guarda lo que había y lo restaura al quitarlo. Oculto hasta que el agente diga que lo conoce.
-        Interruptor lectura = new Interruptor("Modo lectura", "ic_menu_view", true, false, (on, mal) -> agente("lectura " + (on ? "on" : "off"), mal));
+        Interruptor lectura = new Interruptor(Idioma.t("Modo lectura", "Reading mode"), "ic_menu_view", true, false, (on, mal) -> agente("lectura " + (on ? "on" : "off"), mal));
         lectura.vista.setVisibility(View.GONE);
         LinearLayout anchos2 = fila();
         anchos2.addView(avisos.vista, peso());
@@ -421,13 +421,13 @@ class Paneles {
         LinearLayout cuadros = fila();
         cuadros.setBackground(fondo(SUPERFICIE, 0, 20));
         cuadros.setPadding(dp(6), dp(12), dp(6), dp(10));
-        Interruptor girar = new Interruptor("Girar", "ic_qs_auto_rotate", false, false, (on, mal) -> {
+        Interruptor girar = new Interruptor(Idioma.t("Girar", "Auto-rotate"), "ic_qs_auto_rotate", false, false, (on, mal) -> {
             try { Settings.System.putInt(ctx.getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, on ? 1 : 0); }
             catch (RuntimeException e) { mal.run(); }   // sin WRITE_SETTINGS (lo concede el agente)
         });
-        Interruptor avion = new Interruptor("Modo avión", "ic_qs_airplane", false, false, (on, mal) -> agente("ajuste avion " + (on ? "on" : "off"), mal));
-        Interruptor ahorro = new Interruptor("Ahorro", "ic_qs_battery_saver", false, false, (on, mal) -> agente("ajuste ahorro " + (on ? "on" : "off"), mal));
-        Interruptor dnd = new Interruptor("No molestar", "ic_qs_dnd", false, false, (on, mal) -> {
+        Interruptor avion = new Interruptor(Idioma.t("Modo avión", "Airplane mode"), "ic_qs_airplane", false, false, (on, mal) -> agente("ajuste avion " + (on ? "on" : "off"), mal));
+        Interruptor ahorro = new Interruptor(Idioma.t("Ahorro", "Battery saver"), "ic_qs_battery_saver", false, false, (on, mal) -> agente("ajuste ahorro " + (on ? "on" : "off"), mal));
+        Interruptor dnd = new Interruptor(Idioma.t("No molestar", "Do not disturb"), "ic_qs_dnd", false, false, (on, mal) -> {
             // el oyente de notificaciones puede pedirlo sin el permiso de política de "no molestar"
             if (IslaOyente.activo == null) { mal.run(); return; }
             IslaOyente.activo.requestInterruptionFilter(on ? NotificationManager.INTERRUPTION_FILTER_PRIORITY : NotificationManager.INTERRUPTION_FILTER_ALL);
@@ -515,10 +515,10 @@ class Paneles {
         ImageView logo = new ImageView(ctx);
         logo.setImageDrawable(new Logo(0xFF003049));
         b.addView(logo, new LinearLayout.LayoutParams(dp(22), dp(22)));
-        TextView t = texto("Cambiar a Windows", 16, true, 0xFF003049);
+        TextView t = texto(Idioma.t("Cambiar a Windows", "Switch to Windows"), 16, true, 0xFF003049);
         t.setPadding(dp(12), 0, 0, 0);
         b.addView(t);
-        b.setContentDescription("Cambiar a Windows");
+        b.setContentDescription(Idioma.t("Cambiar a Windows", "Switch to Windows"));
         b.setOnClickListener(v -> {
             cerrar();
             AlertDialog d = AWindows.dialogo(ctx);
@@ -602,7 +602,7 @@ class Paneles {
             on = v;
             forma.setColor(on ? ACENTO : APAGADO);
             ic.setColorFilter(on ? 0xFF003049 : Color.WHITE);   // glifo oscuro sobre el acento, como Windows 11
-            if (estado != null) estado.setText(on ? (red != null ? red : conectado ? "Conectado" : "Activado") : "Desactivado");
+            if (estado != null) estado.setText(on ? (red != null ? red : conectado ? Idioma.t("Conectado", "Connected") : Idioma.t("Activado", "On")) : Idioma.t("Desactivado", "Off"));
         }
     }
 
@@ -621,7 +621,7 @@ class Paneles {
 
     /** Del visor por 4445: "wifi <ssid hex> <señal> <c|g|n><s|a>" por red (conectada/guardada/nueva, segura/abierta) entre "wifi inicio" y "wifi fin"; "wifi error" = no conectó. Validado: viene de la red. */
     static void wifiDelVisor(Context c, String l) {
-        if (l.equals("wifi error")) { HILO.post(() -> { Toast.makeText(c, "No se pudo conectar", Toast.LENGTH_SHORT).show(); de(c).pintarWifi(); }); return; }
+        if (l.equals("wifi error")) { HILO.post(() -> { Toast.makeText(c, Idioma.t("No se pudo conectar", "Couldn't connect"), Toast.LENGTH_SHORT).show(); de(c).pintarWifi(); }); return; }
         boolean fin = l.equals("wifi fin"), inicio = l.equals("wifi inicio");
         String[] red = fin || inicio ? null : redDe(l);
         if (!fin && !inicio && red == null) return;
@@ -651,7 +651,7 @@ class Paneles {
     /** Una línea al visor, fuera del hilo principal. avisar: si no hay visor, se dice. */
     void alVisor(String l, boolean avisar) {
         new Thread(() -> {
-            if (!AWindows.alVisor(l) && avisar) HILO.post(() -> Toast.makeText(ctx, "Windows no responde", Toast.LENGTH_SHORT).show());
+            if (!AWindows.alVisor(l) && avisar) HILO.post(() -> Toast.makeText(ctx, Idioma.t("Windows no responde", "Windows isn't responding"), Toast.LENGTH_SHORT).show());
         }).start();
     }
 
@@ -663,8 +663,8 @@ class Paneles {
         ScrollView sv = new ScrollView(ctx);
         sv.addView(lista);
         AlertDialog d = dialogoWifi = new AlertDialog.Builder(ctx).setTitle("Wi-Fi").setView(sv)
-                .setNeutralButton("Abrir redes de Windows", (x, w) -> alVisor("wifi panel", true))
-                .setPositiveButton("Cerrar", null).create();
+                .setNeutralButton(Idioma.t("Abrir redes de Windows", "Open in Windows"), (x, w) -> alVisor("wifi panel", true))
+                .setPositiveButton(Idioma.t("Cerrar", "Close"), null).create();
         d.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         d.setOnDismissListener(x -> { if (dialogoWifi == d) { dialogoWifi = null; listaWifi = null; } });
         d.show();
@@ -677,7 +677,7 @@ class Paneles {
         LinearLayout l = listaWifi;
         if (l == null) return;
         l.removeAllViews();
-        if (redes.isEmpty()) { l.addView(vacio(redesListas ? "Windows no ve redes Wi-Fi" : "Buscando redes…")); return; }
+        if (redes.isEmpty()) { l.addView(vacio(redesListas ? Idioma.t("Windows no ve redes Wi-Fi", "Windows can't find Wi-Fi networks") : Idioma.t("Buscando redes…", "Looking for networks…"))); return; }
         for (String[] r : redes) {
             boolean con = r[3].charAt(0) == 'c', guardada = r[3].charAt(0) != 'n', segura = r[3].charAt(1) == 's';
             LinearLayout f = fila();
@@ -689,13 +689,13 @@ class Paneles {
             LinearLayout textos = new LinearLayout(ctx);
             textos.setOrientation(LinearLayout.VERTICAL);
             textos.addView(texto(r[0], 15, true, Color.WHITE));
-            TextView sub = texto(con ? "Conectada" : guardada ? "Guardada: toca para conectar" : segura ? "Con contraseña: se elige en Windows" : "Abierta: se elige en Windows", 12, false, con ? ACENTO : TEXTO2);
+            TextView sub = texto(con ? Idioma.t("Conectada", "Connected") : guardada ? Idioma.t("Guardada: toca para conectar", "Saved: tap to connect") : segura ? Idioma.t("Con contraseña: se elige en Windows", "Secured: choose it in Windows") : Idioma.t("Abierta: se elige en Windows", "Open: choose it in Windows"), 12, false, con ? ACENTO : TEXTO2);
             textos.addView(sub);
             f.addView(textos, margen(dp(14), 0, 0, 0, 1));
             f.setOnClickListener(v -> {
                 if (con) return;
                 if (!guardada) { alVisor("wifi panel", true); return; }
-                sub.setText("Conectando…");
+                sub.setText(Idioma.t("Conectando…", "Connecting…"));
                 alVisor("wifi conectar " + r[1], true);
                 // Windows tarda unos segundos en cambiar de red; también con la lista ya cerrada (el botón Wi-Fi dice el nombre)
                 for (int ms : new int[] { 3000, 8000 }) HILO.postDelayed(() -> alVisor("wifi lista", false), ms);
@@ -748,7 +748,7 @@ class Paneles {
     void armarNoti() {
         velo();
         LinearLayout t = tarjeta(dp(380), Gravity.TOP | Gravity.START);
-        t.addView(texto("Notificaciones", 18, true, Color.WHITE), margen(dp(4), 0, 0, dp(12)));
+        t.addView(texto(Idioma.t("Notificaciones", "Notifications"), 18, true, Color.WHITE), margen(dp(4), 0, 0, dp(12)));
         listaNoti = new LinearLayout(ctx);
         listaNoti.setOrientation(LinearLayout.VERTICAL);
         listaNoti.setLayoutTransition(new LayoutTransition());   // al quitar uno, los demás suben suaves
@@ -761,11 +761,11 @@ class Paneles {
         sv.addView(listaNoti);
         t.addView(sv);
         LinearLayout pie = fila();
-        TextView ajustes = texto("Ajustes de notificaciones", 14, true, ACENTO);
+        TextView ajustes = texto(Idioma.t("Ajustes de notificaciones", "Notification settings"), 14, true, ACENTO);
         ajustes.setPadding(dp(4), dp(10), dp(8), dp(10));
         ajustes.setOnClickListener(v -> abrirAjustes("android.settings.NOTIFICATION_SETTINGS"));
         pie.addView(ajustes, peso());
-        TextView borrar = pastilla("Borrar");
+        TextView borrar = pastilla(Idioma.t("Borrar", "Clear"));
         borrar.setOnClickListener(v -> borrarNoti());
         pie.addView(borrar);
         t.addView(pie, lleno(dp(8)));
@@ -784,7 +784,7 @@ class Paneles {
         } catch (RuntimeException e) { Log.w(TAG, "avisos", e); }
         l.sort((a, b) -> Long.compare(b.getPostTime(), a.getPostTime()));
         for (StatusBarNotification s : l) listaNoti.addView(filaNoti(s), margen(0, 0, 0, dp(6), 0, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        if (l.isEmpty()) listaNoti.addView(vacio("No hay notificaciones nuevas"));
+        if (l.isEmpty()) listaNoti.addView(vacio(Idioma.t("No hay notificaciones nuevas", "No new notifications")));
         listaNoti.setLayoutTransition(lt);
     }
 
@@ -810,7 +810,7 @@ class Paneles {
         LinearLayout textos = new LinearLayout(ctx);
         textos.setOrientation(LinearLayout.VERTICAL);
         long ahora = System.currentTimeMillis();
-        CharSequence cuando = ahora - s.getPostTime() < DateUtils.MINUTE_IN_MILLIS ? "Ahora"
+        CharSequence cuando = ahora - s.getPostTime() < DateUtils.MINUTE_IN_MILLIS ? Idioma.t("Ahora", "Now")
                 : DateUtils.getRelativeTimeSpanString(s.getPostTime(), ahora, DateUtils.MINUTE_IN_MILLIS, DateUtils.FORMAT_ABBREV_RELATIVE);
         textos.addView(texto(etiqueta(s.getPackageName()) + " · " + cuando, 12, false, TEXTO3));
         CharSequence tit = n.extras.getCharSequence(Notification.EXTRA_TITLE), cuerpo = n.extras.getCharSequence(Notification.EXTRA_TEXT);
@@ -919,7 +919,7 @@ class Paneles {
         sv.setHorizontalScrollBarEnabled(false);
         sv.addView(rejillaTareas, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         col.addView(sv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-        TextView todo = pastilla("Cerrar todo");
+        TextView todo = pastilla(Idioma.t("Cerrar todo", "Close all"));
         todo.setOnClickListener(v -> cerrarTodas());
         col.addView(todo, margen(0, dp(12), 0, dp(20)));
         View dock = dock();
@@ -957,7 +957,7 @@ class Paneles {
         List<String> pkgs = paquetes(l);
         // Tareas de ayudantes sin icono propio (p. ej. la búsqueda de Ajustes, com.google.android.settings.intelligence): fuera.
         if (Inicio.instancia != null) pkgs.removeIf(k -> Inicio.instancia.buscar(k) == null);
-        if (pkgs.isEmpty()) { rejillaTareas.addView(vacio("No hay apps recientes")); return; }
+        if (pkgs.isEmpty()) { rejillaTareas.addView(vacio(Idioma.t("No hay apps recientes", "No recent apps"))); return; }
         int[] p = pantalla();
         int cols = p[0] > p[1] ? 3 : 2, hueco = dp(28);
         // Ancho: caben "cols" columnas a lo ancho y dos tarjetas (cabecera dp(34) + imagen 3:2) a lo alto sobre "Cerrar todo" y el dock.

@@ -529,7 +529,13 @@ static class ControlesCompartidos
     [DllImport("icu.dll", CharSet = CharSet.Unicode)] static extern int ucal_getTimeZoneIDForWindowsID(string winid, int largo, string region, StringBuilder id, int capacidad, ref int error);
     static void EnviarRegion()
     {
-        try { Enviar("idioma", new System.Globalization.CultureInfo(GetUserDefaultUILanguage()).Name); } catch (Exception) { }
+        try
+        {   // Android va en el idioma elegido al instalar; si no es el de Windows, con la región de Windows (p. ej. en-MX: inglés con formatos de México)
+            var c = new System.Globalization.CultureInfo(GetUserDefaultUILanguage());
+            Enviar("idioma", Idioma.Elegido == null || Idioma.Elegido == c.TwoLetterISOLanguageName ? c.Name
+                : Idioma.Elegido + "-" + System.Globalization.RegionInfo.CurrentRegion.TwoLetterISORegionName);
+        }
+        catch (Exception) { }
         try
         {
             TimeZoneInfo.ClearCachedData();
@@ -843,4 +849,14 @@ static class WifiWindows
         catch (Exception e) { Trace.WriteLine("wifi: " + e.Message); }   // launcher desconectado a media lista
         finally { if (h != IntPtr.Zero) WlanCloseHandle(h, IntPtr.Zero); }
     }
+}
+
+// Textos en dos idiomas, juntos donde se usan. Manda el idioma elegido al instalar (HKCU\Software\SurfaceDual, "Idioma" = es|en);
+// sin él, el de Windows: español si Windows está en español y, si no, inglés.
+static class Idioma
+{
+    public static readonly string Elegido = Leer();   // null = no se eligió (instalación anterior a la pregunta)
+    public static readonly bool En = Elegido != null ? Elegido == "en" : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "es";
+    static string Leer() { try { string v = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "Idioma", null) as string; return v == "es" || v == "en" ? v : null; } catch (Exception) { return null; } }
+    public static string T(string es, string en) { return En ? en : es; }
 }

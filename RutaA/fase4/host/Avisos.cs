@@ -201,7 +201,7 @@ sealed class Globo : Form
     public void Poner(string[] a)
     {
         id = a[0]; juntos++;
-        app.Text = a[1] + " · Android" + (juntos > 1 ? "  (y " + (juntos - 1) + " más)" : "");
+        app.Text = a[1] + " · Android" + (juntos > 1 ? Idioma.T("  (y " + (juntos - 1) + " más)", "  (and " + (juntos - 1) + " more)") : "");
         titulo.Text = a[2]; texto.Text = a[3];
         int linea = Font.Height + 4;
         app.Height = titulo.Height = linea; texto.Height = linea * 2;

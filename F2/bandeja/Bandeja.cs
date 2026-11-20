@@ -22,8 +22,9 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
         SetProcessDPIAware();   // sin esto Windows estira el diálogo y se ve borroso en la pantalla de la Surface (200 %)
         if (a.Length > 0 && a[0] == "/probar-pregunta")   // prueba visual del diálogo (sin tocar nada): se cierra solo a los 15 s
         {
-            Pregunta.Mostrar("Teclado quitado", "¿Pasar a Android?\nAndroid está apagado: tarda unos 35 segundos en encender.",
-                "Pasar a Android", "Seguir en Windows", (s, r) => Application.Exit());
+            Pregunta.Mostrar(Idioma.T("Teclado quitado", "Keyboard detached"),
+                Idioma.T("¿Pasar a Android?\nAndroid está apagado: tarda unos 35 segundos en encender.", "Switch to Android?\nAndroid is off: it takes about 35 seconds to start."),
+                Idioma.T("Pasar a Android", "Go to Android"), Idioma.T("Seguir en Windows", "Stay in Windows"),(s, r) => Application.Exit());
             Application.Run();
             return;
         }
@@ -45,14 +46,14 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
 
         var icono = new NotifyIcon { Icon = Icono(), Text = "Surface Dual", Visible = true };
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Abrir Android", null, (s, e) => Entrar());
-        menu.Items.Add("Apagar Android", null, (s, e) => Apagar());
-        var auto = new ToolStripMenuItem("Preguntar al quitar o poner el teclado") { CheckOnClick = true, Checked = Automatico };
+        menu.Items.Add(Idioma.T("Abrir Android", "Open Android"), null, (s, e) => Entrar());
+        menu.Items.Add(Idioma.T("Apagar Android", "Shut down Android"), null, (s, e) => Apagar());
+        var auto = new ToolStripMenuItem(Idioma.T("Preguntar al quitar o poner el teclado", "Ask when the keyboard is detached or attached")) { CheckOnClick = true, Checked = Automatico };
         auto.CheckedChanged += (s, e) => Automatico = auto.Checked;
         menu.Items.Add(auto);
-        menu.Items.Add("Volver a preguntar (olvidar lo recordado)", null, (s, e) => Olvidar());
+        menu.Items.Add(Idioma.T("Volver a preguntar (olvidar lo recordado)", "Ask again (forget saved choices)"), null, (s, e) => Olvidar());
         // Lo lee VisorVM al suspender: tras este tiempo suspendido, Android se apaga solo y libera sus 12 GB (0 = nunca).
-        var autoApagar = new ToolStripMenuItem("Apagar Android tras 1 hora suspendido") { CheckOnClick = true, Checked = AutoApagar };
+        var autoApagar = new ToolStripMenuItem(Idioma.T("Apagar Android tras 1 hora suspendido", "Shut down Android after 1 hour suspended")) { CheckOnClick = true, Checked = AutoApagar };
         autoApagar.CheckedChanged += (s, e) => AutoApagar = autoApagar.Checked;
         menu.Items.Add(autoApagar);
         menu.Opening += (s, e) => { auto.Checked = Automatico; autoApagar.Checked = AutoApagar; };   // el panel también los cambia
@@ -63,11 +64,11 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
             if (Environment.TickCount - ultimaConsulta < 2000) return;
             ultimaConsulta = Environment.TickCount;
             var est = Estado();
-            icono.Text = est == EstadoAndroid.Apagado ? "Surface Dual: Android apagado (no ocupa RAM)"
-                       : est == EstadoAndroid.Suspendido ? "Surface Dual: Android en pausa (ocupa 12 GB)"
-                       : est == EstadoAndroid.Encendiendo ? "Surface Dual: Android encendiendo" : "Surface Dual: Android activo";
+            icono.Text = est == EstadoAndroid.Apagado ? Idioma.T("Surface Dual: Android apagado (no ocupa RAM)", "Surface Dual: Android is off (uses no RAM)")
+                       : est == EstadoAndroid.Suspendido ? Idioma.T("Surface Dual: Android en pausa (ocupa 12 GB)", "Surface Dual: Android is paused (uses 12 GB)")
+                       : est == EstadoAndroid.Encendiendo ? Idioma.T("Surface Dual: Android encendiendo", "Surface Dual: Android is starting") : Idioma.T("Surface Dual: Android activo", "Surface Dual: Android is running");
         };
-        menu.Items.Add("Salir", null, (s, e) => { icono.Visible = false; Application.Exit(); });
+        menu.Items.Add(Idioma.T("Salir", "Exit"), null, (s, e) => { icono.Visible = false; Application.Exit(); });
         icono.ContextMenuStrip = menu;
         icono.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) PanelRapido.Alternar(); };   // panel rápido (Panel.cs)
 
@@ -236,15 +237,17 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
         {
             if (AndroidDelante()) return;
             bool apagado = Estado() == EstadoAndroid.Apagado;
-            Decidir("AlQuitarTeclado", "android", "Teclado quitado",
-                apagado ? "¿Pasar a Android?\nAndroid está apagado: tarda unos 35 segundos en encender." : "¿Pasar a Android?",
-                "Pasar a Android", "Seguir en Windows", () => { if (Tableta()) Entrar(); });   // el teclado sigue quitado al responder
+            Decidir("AlQuitarTeclado", "android", Idioma.T("Teclado quitado", "Keyboard detached"),
+                apagado ? Idioma.T("¿Pasar a Android?\nAndroid está apagado: tarda unos 35 segundos en encender.", "Switch to Android?\nAndroid is off: it takes about 35 seconds to start.")
+                        : Idioma.T("¿Pasar a Android?", "Switch to Android?"),
+                Idioma.T("Pasar a Android", "Go to Android"), Idioma.T("Seguir en Windows", "Stay in Windows"),() => { if (Tableta()) Entrar(); });   // el teclado sigue quitado al responder
         }
         else
         {
             if (!AndroidDelante()) return;
-            Decidir("AlPonerTeclado", "windows", "Teclado puesto", "¿Volver a Windows?\nAndroid queda suspendido (vuelve al instante).",
-                "Volver a Windows", "Seguir en Android", () => { if (!Tableta()) Salir(); });
+            Decidir("AlPonerTeclado", "windows", Idioma.T("Teclado puesto", "Keyboard attached"),
+                Idioma.T("¿Volver a Windows?\nAndroid queda suspendido (vuelve al instante).", "Switch back to Windows?\nAndroid will be suspended (it resumes instantly)."),
+                Idioma.T("Volver a Windows", "Switch to Windows"), Idioma.T("Seguir en Android", "Stay in Android"),() => { if (!Tableta()) Salir(); });
         }
     }
     // Si el usuario marcó "recordar", se hace sin preguntar; si no, pregunta táctil.
@@ -310,7 +313,7 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
             Controls.Add(new Label { Text = lineas[0], Font = fTitulo, ForeColor = tinta, AutoSize = false, Bounds = new Rectangle(margen, y, ancho - 2 * margen, px(28)) });
             y += px(36);
             if (cuerpo != "") { Controls.Add(new Label { Text = cuerpo, Font = fTexto, ForeColor = tenue, Bounds = new Rectangle(margen, y, ancho - 2 * margen, altoCuerpo) }); y += altoCuerpo + px(16); }
-            recordar = new CheckBox { Text = "Recordar mi elección", Font = fTexto, ForeColor = tinta, Bounds = new Rectangle(margen, y, ancho - 2 * margen, px(24)) };
+            recordar = new CheckBox { Text = Idioma.T("Recordar mi elección", "Remember my choice"), Font = fTexto, ForeColor = tinta, Bounds = new Rectangle(margen, y, ancho - 2 * margen, px(24)) };
             Controls.Add(recordar);
             var zonaPie = new Panel { BackColor = pie, Bounds = new Rectangle(0, alto - altoPie, ancho, altoPie) };
             int anchoBoton = (ancho - 2 * margen - px(8)) / 2, yb = (altoPie - altoBoton) / 2;
@@ -388,4 +391,14 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
         }
         return Icon.FromHandle(b.GetHicon());
     }
+}
+
+// Textos en dos idiomas, juntos donde se usan. Manda el idioma elegido al instalar (HKCU\Software\SurfaceDual, "Idioma" = es|en);
+// sin él, el de Windows: español si Windows está en español y, si no, inglés.
+static class Idioma
+{
+    public static readonly string Elegido = Leer();   // null = no se eligió (instalación anterior a la pregunta)
+    public static readonly bool En = Elegido != null ? Elegido == "en" : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "es";
+    static string Leer() { try { string v = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "Idioma", null) as string; return v == "es" || v == "en" ? v : null; } catch (Exception) { return null; } }
+    public static string T(string es, string en) { return En ? en : es; }
 }
