@@ -60,6 +60,13 @@ it left off.
 
 **Uninstall:** double-click `instalador\Desinstalar.cmd`. It undoes what the installer did, using the Windows state it recorded before installing.
 
+## If something fails
+
+Double-click `instalador\Diagnostico.cmd`. It only reads (changes nothing) and creates a `.zip` on your Desktop with what's
+needed to find the problem: Windows version, RAM, graphics driver, blue-screen records and Surface Dual's logs. It removes
+your user name, PC name, serial number, Wi-Fi names, emails and IP addresses. If there was a blue screen, it asks before
+including the crash file; send that one privately. Open a GitHub Issue (or send a direct message) with the `.zip`.
+
 ## Known limitations
 
 - Settings > About shows the model as `sdk_gphone64_arm64`: it is Google's official emulator image.

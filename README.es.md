@@ -60,6 +60,14 @@ donde se quedó.
 
 **Desinstalar:** doble clic en `instalador\Desinstalar.cmd`. Deshace lo que hizo el instalador, con el estado de Windows que anotó antes de instalar.
 
+## Si algo falla
+
+Doble clic en `instalador\Diagnostico.cmd`. Solo lee (no cambia nada) y crea un `.zip` en el Escritorio con lo necesario
+para encontrar el problema: versión de Windows, RAM, controlador de la gráfica, registros de pantallas azules y los
+registros de Surface Dual. Quita tu nombre de usuario, el del equipo, el número de serie, los nombres de redes Wi-Fi,
+correos e IP. Si hubo una pantalla azul, pregunta antes de incluir el archivo del error; ese mándalo en privado. Abre un
+Issue en GitHub (o manda un mensaje directo) con el `.zip`.
+
 ## Límites conocidos
 
 - En Ajustes > Acerca de, el modelo aparece como `sdk_gphone64_arm64`: es la imagen oficial del emulador de Google.
