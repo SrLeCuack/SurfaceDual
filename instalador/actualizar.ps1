@@ -2,7 +2,8 @@
 # ya está instalado). Cambia los programas de Windows, los scripts y la pantalla de inicio de Android; NO toca los discos de
 # Android (apps y datos), las descargas ni el Linux auxiliar. Android no se apaga (al apagar, algunos equipos dan pantalla azul:
 # ESTADO.md 163): si estaba encendido queda en pausa. Revisión: Codex y Gemini (F7/plan/rev_107_*.md).
-# shortcut: no rearma la imagen de Android; si una versión cambia la imagen (preparar.sh, agente, kernel), hará falta otro paso.
+# Si la versión cambia lo de dentro de Android (instalador\imagen.txt distinto del recibo imagen_instalada.txt), rearma Android
+# con preparar.sh en el Linux auxiliar, SIN fábrica (apps y datos se conservan); para eso Android tiene que apagarse una vez.
 #   -Estado <carpeta con hecho.json> y -SinAndroid: solo para probarlo (a mano), sin tocar el Android de verdad.
 param([string]$Usuario, [ValidateSet('', 'es', 'en')][string]$Idioma, [string]$Estado, [switch]$SinAndroid)
 $ErrorActionPreference = 'Stop'
@@ -45,9 +46,21 @@ if (-not $SinAndroid) {
 }
 
 Di (T '  2/4 Copiar los programas nuevos (sin tocar los discos de Android ni las descargas)...' '  2/4 Copying the new programs (without touching Android disks or downloads)...')
-& robocopy.exe $Origen $Destino /E /XF *.vhdx *.avhdx *.vhd launcher_instalado.txt /XD descargas wsl .git /R:3 /W:3 /NFL /NDL /NJH /NJS /NP | Out-Null
+& robocopy.exe $Origen $Destino /E /XF *.vhdx *.avhdx *.vhd launcher_instalado.txt imagen_instalada.txt /XD descargas wsl .git /R:3 /W:3 /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw (T "No se pudieron copiar todos los programas a $Destino (código $LASTEXITCODE). Cierre Surface Dual del todo (o reinicie Windows) y repita Actualizar.cmd." "Not all programs could be copied to $Destino (code $LASTEXITCODE). Close Surface Dual completely (or restart Windows) and run Actualizar.cmd again.") }
 if (-not $SinAndroid) { Start-Process (Join-Path $f4 'host\VisorVM.exe') '--restaurar' -Wait -ErrorAction SilentlyContinue }   # Windows a su frecuencia y giro de siempre
+
+$imgNueva = Get-Content (Join-Path $Origen 'instalador\imagen.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
+$reciboImg = Join-Path $Destino 'instalador\imagen_instalada.txt'
+if ($imgNueva -and $imgNueva -ne (Get-Content $reciboImg -ErrorAction SilentlyContinue | Select-Object -First 1) -and -not $SinAndroid) {
+  Di (T '  Esta versión cambia cosas dentro de Android: se rearma Android (unos 5-10 minutos). Sus apps y datos se conservan.' '  This version changes things inside Android: Android is rebuilt (about 5-10 minutes). Your apps and data are kept.') Cyan
+  if ((Get-VM -Name $VM).State -ne 'Off') { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $f4 'apagar.ps1') }   # el rearme cambia sus discos
+  if ((Get-VM -Name $VM).State -ne 'Off') { throw (T 'Android no se apagó: reinicie Windows y repita Actualizar.cmd.' 'Android did not shut down: restart Windows and run Actualizar.cmd again.') }
+  & wsl.exe -d $DISTRO -u root -e env PRODUCCION=1 VERIFICADO=0 bash "$(Ruta-Wsl $Destino)/RutaA/fase4/preparar.sh" | Out-Null
+  if ($LASTEXITCODE) { throw (T "No se pudo rearmar Android (código $LASTEXITCODE). Sus datos no se tocaron: repita Actualizar.cmd." "Android could not be rebuilt (code $LASTEXITCODE). Your data was not touched: run Actualizar.cmd again.") }
+  Get-VMHardDiskDrive -VMName $VM | ForEach-Object { icacls $_.Path /grant "NT VIRTUAL MACHINE\$((Get-VM -Name $VM).Id.Guid):(R,W)" | Out-Null }   # disco nuevo: sin esto Start-VM da "Acceso denegado" (como iniciar.ps1)
+  Set-Content $reciboImg $imgNueva -Encoding ascii; $apkCambia = $true   # tras rearmar, la pantalla de inicio se comprueba igual
+}
 
 if ($apkCambia -and -not $SinAndroid) {
   Di (T '  3/4 Actualizar la pantalla de inicio de Android (Android se enciende un momento por detrás)...' '  3/4 Updating the Android home screen (Android starts briefly in the background)...')

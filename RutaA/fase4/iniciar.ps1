@@ -13,12 +13,32 @@ switch ($vm.State) {
     # denegado" (19/11). Se da el mismo que pone Hyper-V; repetirlo no cambia nada. Y los registros de %TEMP% no crecen sin tope.
     Get-VMHardDiskDrive -VMName $n | ForEach-Object { icacls $_.Path /grant "NT VIRTUAL MACHINE\$($vm.Id.Guid):(R,W)" | Out-Null }
     Get-Item "$env:TEMP\visorvm_*.log", "$env:TEMP\surfacedual_*.log" -ErrorAction SilentlyContinue | Where-Object Length -gt 1MB | Remove-Item -ErrorAction SilentlyContinue
-    # 8 GB (17/11: Android usa 2,9 GB en reposo y 3,8 GB con 8 apps + vídeo; a 8 GB, 0 muertes de lmkd; libera 4 GB a
-    # Windows). Sin 8 GB libres Hyper-V no arranca: mejor con 6 que no abrir (la próxima vez vuelve a probar 8).
-    $frio = Get-Date
-    foreach ($gb in 8, 6) {
-      Set-VM -Name $n -MemoryStartupBytes ($gb * 1GB)
-      try { Start-VM -Name $n; break } catch { if ($gb -eq 6) { throw } }
+    # Memoria según la del equipo (20/11). Android usa 2,9 GB en reposo y 3,8 GB con 8 apps + vídeo (17/11). Con 32 GB, 8 (o 6
+    # si no caben). Con 16 GB, 6: con 8, a Windows le quedaban ~8 GB y con el navegador usaba el disco como memoria (congelamientos
+    # de un probador). Sin memoria libre Hyper-V no arranca (OutOfMemory, medido con 4 GB libres): se avisa, se "duerme" la memoria
+    # de los programas de Windows que no se usan (pasa a disco; siguen abiertos) y se reintenta; si tampoco, aviso claro.
+    $en = (Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue).Idioma -eq 'en'
+    function Aviso([string]$es, [string]$ing, [int]$seg) { [void](New-Object -ComObject WScript.Shell).Popup($(if ($en) { $ing } else { $es }), $seg, 'Surface Dual', 64) }
+    $tam = if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -ge 24) { 8, 6 } else { , 6 }
+    function Falta { try { (Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory).AvailableMBytes / 1024 -lt $tam[-1] + 0.5 } catch { $true } }
+    $frio = Get-Date; $arrancada = $false; $fallo = $null; $memoria = $false
+    foreach ($intento in 1, 2) {
+      foreach ($gb in $tam) {
+        Set-VM -Name $n -MemoryStartupBytes ($gb * 1GB)
+        try { Start-VM -Name $n; $arrancada = $true; break } catch { $fallo = $_ }
+      }
+      $memoria = -not $arrancada -and (Falta)   # otro fallo (no de memoria): ni liberar ni culpar a la memoria (revisión Codex)
+      if (-not $memoria -or $intento -eq 2) { break }
+      Aviso "Android necesita $($tam[-1]) GB de memoria libre. Liberando memoria de Windows: sus programas siguen abiertos, pero pueden tardar un momento al volver a usarlos." "Android needs $($tam[-1]) GB of free memory. Freeing Windows memory: your programs stay open, but they may take a moment when you use them again." 5
+      if (-not ('SD.Mem' -as [type])) { Add-Type -Namespace SD -Name Mem -MemberDefinition '[DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr h);' }
+      $ses = (Get-Process -Id $PID).SessionId
+      foreach ($p in Get-Process | Where-Object { $_.SessionId -eq $ses -and $_.Id -ne $PID -and $_.ProcessName -notin 'VisorVM', 'dwm', 'csrss', 'winlogon' }) { try { [void][SD.Mem]::EmptyWorkingSet($p.Handle) } catch { } }
+      for ($i = 0; $i -lt 30 -and (Falta); $i++) { Start-Sleep 1 }
+    }
+    if (-not $arrancada) {
+      Get-Process VisorVM -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Process (Join-Path $h 'VisorVM.exe') '--restaurar' -Wait
+      if ($memoria) { Aviso "No hay memoria suficiente para Android ($($tam[-1]) GB). Cierre algunos programas (por ejemplo, pestañas del navegador) y vuelva a intentarlo." "There is not enough memory for Android ($($tam[-1]) GB). Close some programs (for example, browser tabs) and try again." 0 }
+      throw $fallo
     }
     # Si este arranque se cuelga en GRUB (ver vigilar_arranque.ps1), lo corta y arranca otra vez; aparte, para no retener a la Bandeja.
     Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$(Join-Path $PSScriptRoot 'vigilar_arranque.ps1')`"", '-Desde', $frio.ToString('o')

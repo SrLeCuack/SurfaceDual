@@ -161,6 +161,8 @@ if (-not (Test-Path (Join-Path $f4 'android.vhdx')) -or $Simular) {
     & wsl.exe -d $DISTRO -u root -e env SD_LICENCIA_GOOGLE=ACEPTO SD_IDIOMA=$Idioma bash "$r/instalador/armar.sh" $r
     if ($LASTEXITCODE) { throw (T 'El armado de Android falló (el motivo está en las líneas de arriba). Repita Instalar.cmd: sigue donde se quedó.' 'Building Android failed (the reason is in the lines above). Run Instalar.cmd again: it continues where it stopped.') }
     & wsl.exe --terminate $DISTRO | Out-Null
+    # Recibo de la versión de Android armada: el actualizador solo rearma cuando cambia (actualizar.ps1).
+    Copy-Item (Join-Path $Destino 'instalador\imagen.txt') (Join-Path $Destino 'instalador\imagen_instalada.txt') -ErrorAction SilentlyContinue
   }
 }
 

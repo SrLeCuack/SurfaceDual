@@ -41,7 +41,7 @@ In this reading test, Android used **38 % less** power than Edge on Windows. You
 
 - An **ARM64 device with a Qualcomm Snapdragon X** chip (Adreno GPU) running **Windows 11**. Only tested on a Surface Pro 11.
   **It does not work on Intel or AMD (x86/x64) PCs:** the installer checks this first and stops without changing anything.
-- **16 GB of RAM** (Android takes 8 GB while it is on) and **64 GB of free disk space**.
+- **16 GB of RAM** (Android takes 6 GB while it is on with 16 GB, 8 GB with 32 GB) and **64 GB of free disk space**.
 - A Windows **administrator** account and an Internet connection: about 2.2 GB of Android is downloaded, plus Ubuntu and tools.
 - Hyper-V. On Windows 11 **Home** the installer enables it **experimentally**, and only if you type `SI` to confirm.
 
@@ -56,7 +56,8 @@ In this reading test, Android used **38 % less** power than Edge on Windows. You
 
 **Already installed? Updating is just as easy:** download the new version, extract it and double-click `instalador\Instalar.cmd`
 (or `instalador\Actualizar.cmd`). It notices Surface Dual is already installed and only replaces the programs and the
-Android home screen. Your Android apps and data stay as they are, and nothing is downloaded or rebuilt.
+Android home screen. Your Android apps and data stay as they are. If the new version changes something inside Android,
+it shuts Android down once and rebuilds it (5-10 minutes), still keeping your apps and data.
 
 The installer, Android and Surface Dual's own programs (tray icon, viewer, home screen, quick settings) all use the
 language you choose. It installs to `C:\SurfaceDual`. If it stops, open `Instalar.cmd` again and it resumes where

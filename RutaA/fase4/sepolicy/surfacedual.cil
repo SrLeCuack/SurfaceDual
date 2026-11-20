@@ -49,6 +49,8 @@
 (allow surfacedual_agente appops_service_202604 (service_manager (find)))
 (allow surfacedual_agente package_service_202604 (service_manager (find)))
 (allow surfacedual_agente audio_service_202604 (service_manager (find)))
+; "apagar ya" (20/11): apagado ordenado por PowerManager.shutdown, el mismo del menú de Android.
+(allow surfacedual_agente power_service_202604 (service_manager (find)))
 (allow surfacedual_agente audioserver_service_202604 (service_manager (find)))
 (allow surfacedual_agente surfaceflinger_service_202604 (service_manager (find)))
 (allow surfacedual_agente hal_graphics_mapper_service_202604 (service_manager (find)))

@@ -359,6 +359,12 @@ public class Agente {
             split();
         } else if (p[0].equals("linea") && p[1].matches("mantener|suelta")) {
             alLauncher("linea", p[1]);
+        } else if (p[0].equals("apagar") && p[1].equals("ya")) {
+            // Apagado de verdad (20/11): por Hyper-V (hv_utils) Android se apagaba casi en frío, sin cerrar apps ni desmontar /data
+            // ("userdata was not cleanly shutdown" en cada arranque; tras muchos apagados, /data dañado y Android sin arrancar; y en
+            // un probador, pantallas azules de dxgmms2 al soltar la GPU con trabajo en vuelo). Igual que "Apagar" del menú de Android.
+            Object pm = servicio("power", "android.os.IPowerManager");
+            pm.getClass().getMethod("shutdown", boolean.class, String.class, boolean.class).invoke(pm, false, "surfacedual", false);
         } else if (p[0].equals("bloqueo") && p[1].matches("[01]")) {
             // Windows bloqueado (botón de encendido) con Android delante: Android duerme (su pantalla de bloqueo, con la música)
             // y la VM sigue para que suene. Sin audio un rato, se pide al visor pausar la VM (batería).

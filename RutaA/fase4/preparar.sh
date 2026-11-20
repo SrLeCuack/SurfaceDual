@@ -54,6 +54,11 @@ grep -vx 'debug.sf.vsync_reactor_ignore_present_fences=true' $V/build.prop > $W/
 [ "${PRODUCCION:-0}" = 1 ] || printf '\non boot\n    start console\n' >> $V/etc/init/hw/init.ranchu.rc
 # En Hyper-V la consola es el PL011 (ttyAMA0); sin etiqueta queda como "device" y SELinux niega abrirla.
 echo '/dev/ttyAMA0                 u:object_r:console_device:s0' >> $V/etc/selinux/vendor_file_contexts
+# Discos de datos con su etiqueta (20/11): sin ella fsck (e2fsck) no podía abrir userdata ("Permission denied") y Android no se
+# reparaba solo; tras muchos apagados sucios /data no montó ("Structure needs cleaning") y Android no arrancaba.
+printf '/dev/block/by-name/userdata   u:object_r:userdata_block_device:s0
+/dev/block/by-name/metadata   u:object_r:metadata_block_device:s0
+' >> $V/etc/selinux/vendor_file_contexts
 setfattr -n security.selinux -v u:object_r:vendor_configs_file:s0 $V/etc/selinux/vendor_file_contexts
 # Mesa consulta vendor.mesa.* en cada proceso con GL; sin contexto propio (vendor_default_prop) las apps no pueden leerlas y
 # libc escribía "Access denied finding property" (~20 líneas/s con apps abiertas, medido 17/11). Tipo y lectura: surfacedual.cil.
@@ -205,7 +210,7 @@ dd if=$W/vendor_hv.erofs of=$A bs=4096 seek=$((VO / 4096)) conv=notrunc status=n
 # (RutaA/fase4/kernel_ashmem) ya no hace falta: con memfd sin memfd_class se rompían las colas FMQ del audio.
 # Offsets de super: RutaA/fase4/lp_particiones.py. Se genera una vez (caché en $W).
 SO=803209216; SMAX=142467072
-SEV=43   # subir al cambiar surfacedual.rc, surfacedual_agente.dex o el overlay: obliga a regenerar la caché
+SEV=44   # subir al cambiar surfacedual.rc, surfacedual_agente.dex o el overlay: obliga a regenerar la caché
 [ "$(cat $W/system_ext_hv.version 2>/dev/null)" = $SEV ] || rm -f $W/system_ext_hv.erofs
 if [ ! -f $W/system_ext_hv.erofs ]; then
   dd if=$A of=/tmp/se.erofs bs=1M iflag=skip_bytes,count_bytes skip=$SO count=$SMAX status=none
@@ -269,7 +274,8 @@ dd if=$W/product_hv.erofs of=$A bs=4096 seek=$((PO / 4096)) conv=notrunc status=
 dd if=/dev/zero of=$A bs=4096 seek=$(((PO + PZ) / 4096)) count=$(((PMAX - PZ) / 4096)) conv=notrunc status=none
 # Datos de Android (metadata + userdata): se conservan entre armados; de fábrica solo con disco nuevo o FABRICA=1.
 # encrypt/verity: FBE y fs-verity (sin "encrypt", vold falla con EOPNOTSUPP y reinicia).
-if [ ! -f $W/datos_ok ] || [ "${FABRICA:-0}" = 1 ]; then
+# Con android.vhdx en uso nunca de fábrica sin FABRICA=1: un crudo nuevo (o sin datos_ok) se rellena con sus datos (revisión Codex 20/11).
+if { [ ! -f $W/datos_ok ] && [ ! -f "$F/android.vhdx" ]; } || [ "${FABRICA:-0}" = 1 ]; then
   L=$(losetup -Pf --show $A); mkfs.ext4 -q -F -L metadata ${L}p3; mkfs.ext4 -q -F -O encrypt,verity,stable_inodes -L userdata ${L}p4; losetup -d $L
   touch $W/datos_ok
 elif [ -f "$F/android.vhdx" ]; then
@@ -350,5 +356,6 @@ else
 fi
 sgdisk -p $A | tail -4
 # Convertir aparte y sustituir al final: si falla (p. ej. sin espacio) el android.vhdx en uso queda intacto (revisión Gemini).
-rm -f "$F/android.vhdx.tmp"; qemu-img convert -f raw -O vhdx -o subformat=dynamic $A "$F/android.vhdx.tmp" && mv -f "$F/android.vhdx.tmp" "$F/android.vhdx"
+rm -f "$F/android.vhdx.tmp"; qemu-img convert -f raw -O vhdx -o subformat=dynamic $A "$F/android.vhdx.tmp"   # en línea propia: set -e corta si falla
+mv -f "$F/android.vhdx.tmp" "$F/android.vhdx"
 ls -la "$F"/*.vhdx
