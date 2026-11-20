@@ -180,11 +180,20 @@ Titulo (T 'Fase 6 de 6: primer arranque de Android (pantalla de inicio de Surfac
 if (-not $hecho.Launcher) {
   try {
     Hacer (T 'descargar adb de Google, esperar a que Android arranque e instalar la pantalla de inicio y el botón "Cambiar a Windows"' 'download adb from Google, wait for Android to start and install the home screen and the "Switch to Windows" button') {
-      $pt = Join-Path $Destino 'descargas'; $adb = Join-Path $pt 'platform-tools\adb.exe'; $d = '127.0.0.1:5556'
+      $pt = Join-Path $Destino 'descargas'; $adb = Join-Path $pt 'platform-tools\adb.exe'
       # shortcut: adb.exe de Google es x86 (emulado) y "latest" no tiene hash fijo (HTTPS de dl.google.com); solo se usa aquí, una vez. Sobra cuando el launcher vaya en la imagen.
       if (-not (Test-Path $adb)) { New-Item $pt -ItemType Directory -Force | Out-Null; Bajar $ADB_ZIP "$pt\adb.zip"; Expand-Archive "$pt\adb.zip" $pt -Force }
-      if ((Get-VM -Name $VM).State -ne 'Running') { Start-VM -Name $VM }
-      $puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, 5556, 5555 -WindowStyle Hidden -PassThru
+      # Con 'Stop', Windows PowerShell 5.1 convertía en error fatal el aviso normal de adb en stderr ("* daemon not running;
+      # starting now") y esta fase fallaba siempre (19/11, probador de Reddit; reproducido). Desde aquí adb se juzga por $LASTEXITCODE.
+      $ErrorActionPreference = 'Continue'
+      # Al activar Hyper-V, Windows (WinNAT) puede reservar rangos de puertos que incluyan 5037 (adb) o 5556 (puente): el primero libre.
+      function Libre([int]$p) { try { $l = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $p); $l.Start(); $l.Stop(); $true } catch { $false } }
+      $env:ANDROID_ADB_SERVER_PORT = "$(5037, 15037, 25037, 35037 | Where-Object { Libre $_ } | Select-Object -First 1)"
+      $pp = 5556, 15556, 25556, 35556 | Where-Object { Libre $_ } | Select-Object -First 1
+      if (-not $pp -or -not $env:ANDROID_ADB_SERVER_PORT) { throw (T 'Windows tiene ocupados los puertos que necesita adb (5037/5556 y alternativos). Reinicie Windows y repita Instalar.cmd.' 'Windows has the ports adb needs (5037/5556 and alternatives) taken. Restart Windows and run Instalar.cmd again.') }
+      $d = "127.0.0.1:$pp"
+      if ((Get-VM -Name $VM).State -ne 'Running') { Start-VM -Name $VM -ErrorAction Stop }
+      $puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, $pp, 5555 -WindowStyle Hidden -PassThru -ErrorAction Stop
       try {
         $listo = $false
         for ($i = 0; $i -lt 60 -and -not $listo; $i++) {   # hasta 5 min
