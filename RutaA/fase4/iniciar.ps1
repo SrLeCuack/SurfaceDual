@@ -3,6 +3,13 @@
 # Requisitos: VM armada (wsl -u root -e bash RutaA/fase4/preparar.sh) y el usuario en "Administradores de Hyper-V".
 $ErrorActionPreference = 'Stop'
 $n = 'SurfaceDualAndroid'; $h = Join-Path $PSScriptRoot 'host'
+# El actualizador está rearmando Android (cambia sus discos): no se enciende. Un cerrojo de más de 1 h es de un corte: no vale.
+$c = Get-Item (Join-Path $PSScriptRoot 'actualizando') -ErrorAction SilentlyContinue
+if ($c -and $c.LastWriteTime -gt (Get-Date).AddHours(-1)) {
+  $en = (Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue).Idioma -eq 'en'
+  [void](New-Object -ComObject WScript.Shell).Popup($(if ($en) { 'Surface Dual is updating Android. Wait until the update window says it is done.' } else { 'Surface Dual está actualizando Android. Espere a que la ventana de actualización diga que terminó.' }), 10, 'Surface Dual', 64)
+  Get-Process VisorVM -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Process (Join-Path $h 'VisorVM.exe') '--restaurar' -Wait; exit 1
+}
 $vm = Get-VM -Name $n -ErrorAction SilentlyContinue
 if (-not $vm) { & (Join-Path $PSScriptRoot 'crear_vm.ps1') -Segundos 2 | Out-Null; $vm = Get-VM -Name $n }
 switch ($vm.State) {

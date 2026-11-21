@@ -186,6 +186,7 @@ grub-mkstandalone -O arm64-efi -o $D/BOOTAA64.EFI --modules="part_gpt fat linux 
 mmd -i $D/efi.img ::/EFI ::/EFI/BOOT; mcopy -i $D/efi.img $D/BOOTAA64.EFI ::/EFI/BOOT/BOOTAA64.EFI
 mcopy -i $D/efi.img "$F/Image-android" ::/Image; mcopy -i $D/efi.img $W/ramdisk-bc.img ::/ramdisk.img
 dd if=$D/efi.img of=$D/arranque.raw bs=512 seek=2048 conv=notrunc status=none
+[ ! -f "$F/arranque.vhdx" ] || cp -f "$F/arranque.vhdx" "$F/arranque.vhdx.anterior"   # el anterior, hasta que actualizar.ps1 vea arrancar a Android (Gemini)
 qemu-img convert -f raw -O vhdx -o subformat=dynamic $D/arranque.raw "$F/arranque.vhdx"
 # Disco de Android: vbmeta + super (mismo PARTUUID que en el emulador) + metadata + userdata nuevos (sin cifrar: prueba).
 # El crudo se guarda en /opt (ext4 de WSL): copiar super desde /mnt/c tarda ~15 min; después solo se reescriben vendor y datos.
@@ -357,5 +358,6 @@ fi
 sgdisk -p $A | tail -4
 # Convertir aparte y sustituir al final: si falla (p. ej. sin espacio) el android.vhdx en uso queda intacto (revisión Gemini).
 rm -f "$F/android.vhdx.tmp"; qemu-img convert -f raw -O vhdx -o subformat=dynamic $A "$F/android.vhdx.tmp"   # en línea propia: set -e corta si falla
+[ ! -f "$F/android.vhdx" ] || mv -f "$F/android.vhdx" "$F/android.vhdx.anterior"   # el anterior, hasta ver que Android arranca (revisión Codex)
 mv -f "$F/android.vhdx.tmp" "$F/android.vhdx"
 ls -la "$F"/*.vhdx

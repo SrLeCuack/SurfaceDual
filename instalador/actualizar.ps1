@@ -50,44 +50,78 @@ Di (T '  2/4 Copiar los programas nuevos (sin tocar los discos de Android ni las
 if ($LASTEXITCODE -ge 8) { throw (T "No se pudieron copiar todos los programas a $Destino (código $LASTEXITCODE). Cierre Surface Dual del todo (o reinicie Windows) y repita Actualizar.cmd." "Not all programs could be copied to $Destino (code $LASTEXITCODE). Close Surface Dual completely (or restart Windows) and run Actualizar.cmd again.") }
 if (-not $SinAndroid) { Start-Process (Join-Path $f4 'host\VisorVM.exe') '--restaurar' -Wait -ErrorAction SilentlyContinue }   # Windows a su frecuencia y giro de siempre
 
+$adb = Join-Path $Destino 'descargas\platform-tools\adb.exe'; $puente = $null; $d = $null
+# Encender o reanudar Android, abrir el puente de adb y esperar a que arranque (5 min como mucho). Lo usan el apagado limpio
+# y la pantalla de inicio. Como la fase 6 del instalador: adb se juzga por $LASTEXITCODE (PowerShell 5.1 con 'Stop' tomaba
+# sus avisos como errores) y puertos libres por si Hyper-V reservó 5037/5556.
+function Conectar {
+  $ErrorActionPreference = 'Continue'
+  function Libre([int]$p) { try { $l = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $p); $l.Start(); $l.Stop(); $true } catch { $false } }
+  $env:ANDROID_ADB_SERVER_PORT = "$(5037, 15037, 25037, 35037 | Where-Object { Libre $_ } | Select-Object -First 1)"
+  $pp = 5556, 15556, 25556, 35556 | Where-Object { Libre $_ } | Select-Object -First 1; $script:d = "127.0.0.1:$pp"
+  if (-not $pp -or -not $env:ANDROID_ADB_SERVER_PORT -or -not (Test-Path $adb)) { return $false }
+  if ((Get-VM -Name $VM).State -eq 'Off' -and (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -lt 24) { Set-VM -Name $VM -MemoryStartupBytes 6GB }   # como iniciar.ps1
+  # Recién rearmado, el Linux auxiliar puede retener memoria unos segundos aunque se cierre (medido 20/11: 'no se pueden asignar
+  # 8192 MB' en un equipo de 32 GB): se reintenta 2 min.
+  if ((Get-VM -Name $VM).State -eq 'Paused') { Resume-VM -Name $VM }
+  for ($k = 0; $k -lt 12 -and (Get-VM -Name $VM).State -ne 'Running'; $k++) { try { Start-VM -Name $VM -ErrorAction Stop } catch { Start-Sleep 10 } }
+  if ((Get-VM -Name $VM).State -ne 'Running') { return $false }
+  $script:puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, $pp, 5555 -WindowStyle Hidden -PassThru
+  for ($i = 0; $i -lt 60; $i++) { & $adb connect $script:d *> $null; if ("$(& $adb -s $script:d shell getprop sys.boot_completed 2>$null)".Trim() -eq '1') { return $true }; Start-Sleep 5 }
+  $false
+}
+function Soltar { if (Test-Path $adb) { & $adb kill-server *> $null }; if ($script:puente) { Stop-Process -Id $script:puente.Id -Force -ErrorAction SilentlyContinue; $script:puente = $null } }
+
 $imgNueva = Get-Content (Join-Path $Origen 'instalador\imagen.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
-$reciboImg = Join-Path $Destino 'instalador\imagen_instalada.txt'
+$reciboImg = Join-Path $Destino 'instalador\imagen_instalada.txt'; $rearmado = $false
 if ($imgNueva -and $imgNueva -ne (Get-Content $reciboImg -ErrorAction SilentlyContinue | Select-Object -First 1) -and -not $SinAndroid) {
   Di (T '  Esta versión cambia cosas dentro de Android: se rearma Android (unos 5-10 minutos). Sus apps y datos se conservan.' '  This version changes things inside Android: Android is rebuilt (about 5-10 minutes). Your apps and data are kept.') Cyan
-  if ((Get-VM -Name $VM).State -ne 'Off') { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $f4 'apagar.ps1') }   # el rearme cambia sus discos
-  if ((Get-VM -Name $VM).State -ne 'Off') { throw (T 'Android no se apagó: reinicie Windows y repita Actualizar.cmd.' 'Android did not shut down: restart Windows and run Actualizar.cmd again.') }
-  & wsl.exe -d $DISTRO -u root -e env PRODUCCION=1 VERIFICADO=0 bash "$(Ruta-Wsl $Destino)/RutaA/fase4/preparar.sh" | Out-Null
-  if ($LASTEXITCODE) { throw (T "No se pudo rearmar Android (código $LASTEXITCODE). Sus datos no se tocaron: repita Actualizar.cmd." "Android could not be rebuilt (code $LASTEXITCODE). Your data was not touched: run Actualizar.cmd again.") }
-  Get-VMHardDiskDrive -VMName $VM | ForEach-Object { icacls $_.Path /grant "NT VIRTUAL MACHINE\$((Get-VM -Name $VM).Id.Guid):(R,W)" | Out-Null }   # disco nuevo: sin esto Start-VM da "Acceso denegado" (como iniciar.ps1)
-  Set-Content $reciboImg $imgNueva -Encoding ascii; $apkCambia = $true   # tras rearmar, la pantalla de inicio se comprueba igual
+  # Mientras se rearma, iniciar.ps1 no enciende Android (menú Inicio o teclado): cambiaría sus discos a medias (revisión Codex).
+  $cerrojo = Join-Path $f4 'actualizando'; New-Item $cerrojo -ItemType File -Force | Out-Null
+  try {
+    if ((Get-VM -Name $VM).State -ne 'Off') {
+      # Apagado limpio: la imagen vieja no conoce el "apagar ya" del agente y apagar.ps1 caería en el apagado de Hyper-V (pantallas
+      # azules en un probador). "svc power shutdown" por adb es el apagado de Android y viene en toda imagen: medido 7 s, 18508 (20/11).
+      try { if (Conectar) { & $adb -s $d shell svc power shutdown *> $null; for ($i = 0; $i -lt 60 -and (Get-VM -Name $VM).State -ne 'Off'; $i++) { Start-Sleep 1 } } } finally { Soltar }
+      if ((Get-VM -Name $VM).State -ne 'Off') { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $f4 'apagar.ps1') }
+    }
+    if ((Get-VM -Name $VM).State -ne 'Off') { throw (T 'Android no se apagó: reinicie Windows y repita Actualizar.cmd.' 'Android did not shut down: restart Windows and run Actualizar.cmd again.') }
+    # Un disco que Hyper-V no cerró limpio (Windows o la VM caídos) guarda un registro de cambios pendiente y qemu-img se niega a
+    # leerlo (probador, 1.0.9: "contains a log that needs to be replayed"). Montarlo y desmontarlo en Windows aplica ese
+    # registro con el mismo controlador que usa Hyper-V (en uno limpio solo toca metadatos del contenedor). Sin letra de unidad.
+    # Si no se desmonta, se para aquí: WSL no podría leerlo (revisión Codex y Gemini).
+    foreach ($r in (Get-VMHardDiskDrive -VMName $VM).Path) {
+      if ((Get-VHD -Path $r).Attached) { throw (T "El disco $r está montado en Windows: reinicie Windows y repita Actualizar.cmd." "The disk $r is mounted in Windows: restart Windows and run Actualizar.cmd again.") }
+      Mount-VHD -Path $r -NoDriveLetter
+      for ($i = 0; $i -lt 5 -and (Get-VHD -Path $r).Attached; $i++) { Dismount-VHD -Path $r -ErrorAction SilentlyContinue; if ((Get-VHD -Path $r).Attached) { Start-Sleep 2 } }
+      if ((Get-VHD -Path $r).Attached) { throw (T "No se pudo desmontar ${r}: reinicie Windows y repita Actualizar.cmd. Sus datos no se tocaron." "Could not unmount ${r}: restart Windows and run Actualizar.cmd again. Your data was not touched.") }
+    }
+    # preparar.sh deja los discos anteriores como *.vhdx.anterior: se borran cuando Android arranca (paso 3/4).
+    & wsl.exe -d $DISTRO -u root -e env PRODUCCION=1 VERIFICADO=0 bash "$(Ruta-Wsl $Destino)/RutaA/fase4/preparar.sh" | Out-Null
+    $fallo = $LASTEXITCODE; & wsl.exe --terminate $DISTRO | Out-Null   # que suelte su memoria antes de encender Android (como el instalador)
+    if ($fallo) { throw (T "No se pudo rearmar Android (código $fallo). Sus datos no se tocaron: repita Actualizar.cmd." "Android could not be rebuilt (code $fallo). Your data was not touched: run Actualizar.cmd again.") }
+    foreach ($r in (Get-VMHardDiskDrive -VMName $VM).Path) {   # disco nuevo: sin esto Start-VM da "Acceso denegado" (como iniciar.ps1)
+      icacls $r /grant "NT VIRTUAL MACHINE\$((Get-VM -Name $VM).Id.Guid):(R,W)" | Out-Null
+      if ($LASTEXITCODE) { throw (T "No se pudo dar permiso a Android sobre $r. Repita Actualizar.cmd." "Could not give Android permission on $r. Run Actualizar.cmd again.") }
+    }
+  } finally { Remove-Item $cerrojo -ErrorAction SilentlyContinue }
+  Set-Content $reciboImg $imgNueva -Encoding ascii; $apkCambia = $true; $rearmado = $true   # tras rearmar, se comprueba que arranca
 }
 
-if ($apkCambia -and -not $SinAndroid) {
+# También si quedó una copia *.anterior sin comprobar (una vez anterior no se pudo encender): se comprueba y se borra (Codex).
+if (($apkCambia -or (Get-ChildItem $f4 -Filter '*.vhdx.anterior' -ErrorAction SilentlyContinue)) -and -not $SinAndroid) {
   Di (T '  3/4 Actualizar la pantalla de inicio de Android (Android se enciende un momento por detrás)...' '  3/4 Updating the Android home screen (Android starts briefly in the background)...')
-  $adb = Join-Path $Destino 'descargas\platform-tools\adb.exe'
-  if (-not (Test-Path $adb)) { Di (T '  No está adb de la instalación: la pantalla de inicio se queda como estaba.' '  The adb from the installation is missing: the home screen stays as it was.') Yellow }
-  else {
-    # Como la fase 6 del instalador: adb se juzga por $LASTEXITCODE (PowerShell 5.1 con 'Stop' tomaba sus avisos como errores)
-    # y puertos libres por si Hyper-V reservó 5037/5556.
-    $ErrorActionPreference = 'Continue'; $ok = $false; $puente = $null
-    function Libre([int]$p) { try { $l = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $p); $l.Start(); $l.Stop(); $true } catch { $false } }
-    $env:ANDROID_ADB_SERVER_PORT = "$(5037, 15037, 25037, 35037 | Where-Object { Libre $_ } | Select-Object -First 1)"
-    $pp = 5556, 15556, 25556, 35556 | Where-Object { Libre $_ } | Select-Object -First 1; $d = "127.0.0.1:$pp"
-    try {
-      if (-not $pp -or -not $env:ANDROID_ADB_SERVER_PORT) { throw 'puertos' }
-      if ((Get-VM -Name $VM).State -eq 'Paused') { Resume-VM -Name $VM -ErrorAction Stop } elseif ((Get-VM -Name $VM).State -ne 'Running') { Start-VM -Name $VM -ErrorAction Stop }
-      $puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, $pp, 5555 -WindowStyle Hidden -PassThru -ErrorAction Stop
-      $listo = $false
-      for ($i = 0; $i -lt 60 -and -not $listo; $i++) { & $adb connect $d *> $null; $listo = "$(& $adb -s $d shell getprop sys.boot_completed 2>$null)".Trim() -eq '1'; if (-not $listo) { Start-Sleep 5 } }
-      if ($listo) { & $adb -s $d install -r (Join-Path $Destino $apk) *> $null; $ok = -not $LASTEXITCODE }
-    } catch { } finally {
-      & $adb kill-server *> $null; if ($puente) { Stop-Process -Id $puente.Id -Force -ErrorAction SilentlyContinue }
-      if ((Get-VM -Name $VM).State -eq 'Running') { Suspend-VM -Name $VM -ErrorAction SilentlyContinue }   # en pausa hasta que la persona entre
-    }
-    $ErrorActionPreference = 'Stop'
-    if ($ok) { Set-Content $recibo $huella -Encoding ascii }
-    else { Di (T '  No se pudo actualizar la pantalla de inicio; lo demás sí. Repita Actualizar.cmd más tarde.' '  The home screen could not be updated; everything else was. Run Actualizar.cmd again later.') Yellow }
+  $ok = $false; $listo = $false
+  try { $listo = Conectar; if ($listo) { & $adb -s $d install -r (Join-Path $Destino $apk) *> $null; $ok = -not $LASTEXITCODE } }
+  catch { } finally {
+    Soltar
+    if ((Get-VM -Name $VM).State -eq 'Running') { Suspend-VM -Name $VM -ErrorAction SilentlyContinue }   # en pausa hasta que la persona entre
   }
+  if ($ok) { Set-Content $recibo $huella -Encoding ascii }
+  else { Di (T '  No se pudo actualizar la pantalla de inicio; lo demás sí. Repita Actualizar.cmd más tarde.' '  The home screen could not be updated; everything else was. Run Actualizar.cmd again later.') Yellow }
+  $viejos = Get-ChildItem $f4 -Filter '*.vhdx.anterior' -ErrorAction SilentlyContinue
+  if ($listo) { $viejos | Remove-Item -Force -ErrorAction SilentlyContinue }   # Android arrancó: fuera los anteriores (también si quedaron de una vez anterior)
+  elseif ($viejos) { Di (T "  Android se rearmó, pero no se pudo comprobar que arranca. Ábralo como siempre: si arranca bien, repita Actualizar.cmd para terminar (pone la pantalla de inicio y borra la copia anterior). Si no arranca, ejecute instalador\Diagnostico.cmd y escríbanos: su disco anterior quedó guardado en $f4 (*.vhdx.anterior)." "  Android was rebuilt, but it could not be checked that it starts. Open it as usual: if it starts fine, run Actualizar.cmd again to finish (it installs the home screen and deletes the previous copy). If it does not start, run instalador\Diagnostico.cmd and contact us: your previous disk was kept in $f4 (*.vhdx.anterior).") Yellow }
 } else { Di (T '  3/4 La pantalla de inicio de Android ya está al día.' '  3/4 The Android home screen is already up to date.') }
 
 Di (T '  4/4 Volver a abrir el icono de Surface Dual...' '  4/4 Reopening the Surface Dual icon...')
