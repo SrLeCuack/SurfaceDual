@@ -103,17 +103,29 @@ if (-not $e.HyperV) {
     $ok = Preguntar (T '¿Activar Hyper-V en este Windows Home?' 'Enable Hyper-V on this Windows Home?') (T 'SI' 'YES')
   }
   if (-not $ok) { Di (T 'Sin Hyper-V no se puede instalar. No se ha cambiado nada más.' 'It cannot be installed without Hyper-V. Nothing else has been changed.') Red; Salir 2 }
-  if ($casa) { Hacer (T "añadir los $($e.PaquetesHV) paquetes de Hyper-V que ya están en Windows (DISM /Add-Package)" "add the $($e.PaquetesHV) Hyper-V packages already present in Windows (DISM /Add-Package)") {
-      # De cada paquete, la versión más nueva que Windows acepte; si ninguna, se avisa y se sigue: quien manda es Enable-Feature.
-      $pkg = "$env:SystemRoot\servicing\Packages"; $sin = @()
-      foreach ($grupo in Paquetes-HV @(Get-ChildItem "$pkg\Microsoft-Hyper-V*.mum" | ForEach-Object Name)) {
-        $dentro = $false
-        foreach ($n in $grupo) { try { Dism "/Add-Package:`"$pkg\$n`""; $dentro = $true; break } catch { $causa = "$_" } }
-        if (-not $dentro) { $sin += "$($grupo[0]) ($causa)" }
-      }
-      if ($sin) { Di (T "  Aviso: $($sin.Count) paquete(s) no se pudieron añadir (suele ser una versión que Windows ya limpió); se sigue: $($sin -join '; ')" "  Warning: $($sin.Count) package(s) could not be added (usually a version Windows already cleaned up); continuing: $($sin -join '; ')") Yellow }
-      Marcar PaquetesHome $true } }
-  Hacer (T 'activar la característica Hyper-V (DISM /Enable-Feature Microsoft-Hyper-V /All)' 'enable the Hyper-V feature (DISM /Enable-Feature Microsoft-Hyper-V /All)') { Dism '/Enable-Feature /FeatureName:Microsoft-Hyper-V /All'; Marcar HyperVActivado $true }
+  # Todas las versiones de cada paquete, de la más vieja (base) a la más nueva, como el método conocido para Home: con solo la más nueva,
+  # Enable-Feature daba 14107 ("falta un miembro de la transacción", probador 1.0.7). Las que Windows ya limpió fallan
+  # (1168) y se ignoran; solo se avisa si de un paquete no entró ninguna versión. Quien manda es Enable-Feature.
+  $anadir = {
+    $pkg = "$env:SystemRoot\servicing\Packages"; $sin = @()
+    foreach ($grupo in Paquetes-HV @(Get-ChildItem "$pkg\Microsoft-Hyper-V*.mum" | ForEach-Object Name)) {
+      $dentro = $false
+      foreach ($n in $grupo[($grupo.Count - 1)..0]) { try { Dism "/Add-Package:`"$pkg\$n`""; $dentro = $true } catch { $causa = "$_" } }
+      if (-not $dentro) { $sin += "$($grupo[0]) ($causa)" }
+    }
+    if ($sin) { Di (T "  Aviso: $($sin.Count) paquete(s) no se pudieron añadir (suele ser una versión que Windows ya limpió); se sigue: $($sin -join '; ')" "  Warning: $($sin.Count) package(s) could not be added (usually a version Windows already cleaned up); continuing: $($sin -join '; ')") Yellow }
+  }
+  if ($casa) { Hacer (T "añadir los $($e.PaquetesHV) paquetes de Hyper-V que ya están en Windows (DISM /Add-Package)" "add the $($e.PaquetesHV) Hyper-V packages already present in Windows (DISM /Add-Package)") { & $anadir; Marcar PaquetesHome $true } }
+  Hacer (T 'activar la característica Hyper-V (DISM /Enable-Feature Microsoft-Hyper-V /All)' 'enable the Hyper-V feature (DISM /Enable-Feature Microsoft-Hyper-V /All)') {
+    try { Dism '/Enable-Feature /FeatureName:Microsoft-Hyper-V /All' }
+    catch {
+      if (-not $casa -or "$_" -notmatch '\b14107\b') { throw }
+      # 14107 = falta un miembro de la transacción (piezas de Windows): RestoreHealth intenta reponerlas desde Windows
+      # Update (la solución que se da para este error) y se repite todo una vez.
+      Di (T '  Windows no tiene todas las piezas que necesita Hyper-V. Se intentará reparar Windows (DISM /RestoreHealth): 10-30 minutos, necesita Internet, y la ventana puede parecer detenida; no la cierre...' '  Windows is missing some pieces Hyper-V needs. It will try to repair Windows (DISM /RestoreHealth): 10-30 minutes, needs Internet, and the window may look stuck; do not close it...') Yellow
+      Dism '/Cleanup-Image /RestoreHealth'; & $anadir; Dism '/Enable-Feature /FeatureName:Microsoft-Hyper-V /All'
+    }
+    Marcar HyperVActivado $true }
   $reiniciar = $true
 }
 if (-not $e.Wsl) { Hacer (T 'instalar el Subsistema de Windows para Linux (wsl --install --no-distribution)' 'install Windows Subsystem for Linux (wsl --install --no-distribution)') {
