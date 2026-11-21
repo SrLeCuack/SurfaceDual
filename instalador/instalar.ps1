@@ -123,7 +123,19 @@ if (-not $e.HyperV) {
       # 14107 = falta un miembro de la transacción (piezas de Windows): RestoreHealth intenta reponerlas desde Windows
       # Update (la solución que se da para este error) y se repite todo una vez.
       Di (T '  Windows no tiene todas las piezas que necesita Hyper-V. Se intentará reparar Windows (DISM /RestoreHealth): 10-30 minutos, necesita Internet, y la ventana puede parecer detenida; no la cierre...' '  Windows is missing some pieces Hyper-V needs. It will try to repair Windows (DISM /RestoreHealth): 10-30 minutes, needs Internet, and the window may look stuck; do not close it...') Yellow
-      Dism '/Cleanup-Image /RestoreHealth'; & $anadir; Dism '/Enable-Feature /FeatureName:Microsoft-Hyper-V /All'
+      try { Dism '/Cleanup-Image /RestoreHealth'; & $anadir; Dism '/Enable-Feature /FeatureName:Microsoft-Hyper-V /All' }
+      catch {
+        # Medido en un probador (CBS.log, 21/11): "winner missing files" de los componentes de Hyper-V 26100.1746 (Windows
+        # borró sus archivos y dejó la lista) y RestoreHealth 0x800F0915. Vía gratis que PUEDE reponerlos (una instalación limpia
+        # de Home sí los trae: así se activó en este equipo) sin perder nada: reinstalar la misma versión de Windows desde
+        # Configuración (KB5036436); no garantizada (Codex/Gemini, F7/plan/rev_1011_*.md). La segura y oficial: Windows 11 Pro.
+        Pasos (T 'A Windows le faltan archivos de Hyper-V y la reparación automática no los repuso. Puede intentar esto (conserva sus apps, archivos y ajustes; puede tardar una hora o más):' 'Windows is missing some Hyper-V files and the automatic repair did not restore them. You can try this (keeps your apps, files and settings; it may take an hour or more):') @(
+          (T 'Abra Configuración > Sistema > Recuperación.' 'Open Settings > System > Recovery.'),
+          (T 'En "Solucionar problemas con Windows Update", pulse "Reinstalar ahora" y luego "Aceptar". Deje el equipo enchufado y con Internet.' 'Under "Fix problems using Windows Update", click "Reinstall now" and then "OK". Keep the PC plugged in and online.'),
+          (T 'Cuando Windows termine y se reinicie, abra otra vez Instalar.cmd: sigue donde se quedó.' 'When Windows finishes and restarts, open Instalar.cmd again: it continues where it stopped.'),
+          (T 'Si esa opción no aparece o aun así falla, la vía oficial y segura es Windows 11 Pro (Configuración > Sistema > Activación > Actualizar edición), que trae Hyper-V.' 'If that option is missing or it still fails, the official and reliable way is Windows 11 Pro (Settings > System > Activation > Upgrade your edition), which includes Hyper-V.'))
+        throw (T "No se pudo reparar ni activar Hyper-V (ver los pasos de arriba). Detalle: $_" "Hyper-V could not be repaired or enabled (see the steps above). Details: $_")
+      }
     }
     Marcar HyperVActivado $true }
   $reiniciar = $true
