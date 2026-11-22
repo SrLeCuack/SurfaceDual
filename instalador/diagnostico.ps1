@@ -69,6 +69,38 @@ Guardar 'android_vm.txt' @(
   'Procesos de Surface Dual:'; (Get-Process VisorVM, Bandeja, HvAudio, HvCamara, HvSensores, HvCarpetas, HvMdns, HvPuente -ErrorAction SilentlyContinue | Format-Table Name, StartTime, WorkingSet64 -AutoSize | Out-String)
 )
 
+# Registro de dentro de Android, si está encendido (22/11: un probador con Android que arranca pero no llega a la pantalla;
+# sin esto solo se podía adivinar). Por adb, como la fase 6: puerto libre propio, sin tocar el del instalador.
+$adb = if ($hecho.Destino) { Join-Path $hecho.Destino 'descargas\platform-tools\adb.exe' }
+$puente = if ($hecho.Destino) { Join-Path $hecho.Destino 'RutaA\fase4\host\HvPuente.exe' }
+$conLog = $adb -and (Test-Path $adb) -and (Test-Path $puente) -and (Get-VM -Name $VM -ErrorAction SilentlyContinue).State -eq 'Running'
+if ($conLog -and -not $SinPreguntar) {
+  $conLog = (Read-Host (T '  Android está encendido. ¿Incluir su registro interno (avisos y errores; puede nombrar apps)? (S/N)' '  Android is on. Include its internal log (warnings and errors; it may name apps)? (Y/N)')).Trim() -match '^[SsYy]'
+}
+if ($conLog) {
+  Di (T '  Registro interno de Android...' '  Android internal log...')
+  function Libre([int]$p) { try { $l = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $p); $l.Start(); $l.Stop(); $true } catch { $false } }
+  $ps = 5038, 15038, 25038, 35038 | Where-Object { Libre $_ } | Select-Object -First 1
+  $pp = 5557, 15557, 25557, 35557 | Where-Object { Libre $_ } | Select-Object -First 1
+  $antes = $env:ANDROID_ADB_SERVER_PORT; $pu = $null
+  # Sin puertos propios no se sigue: kill-server en el puerto por defecto cerraría el adb del instalador (Codex).
+  if ($ps -and $pp) {
+    $env:ANDROID_ADB_SERVER_PORT = "$ps"; $d = "127.0.0.1:$pp"
+    try {
+      $pu = Start-Process $puente -ArgumentList (Get-VM -Name $VM).Id.Guid, $pp, 5555 -WindowStyle Hidden -PassThru
+      $est = ''; for ($i = 0; $i -lt 10 -and $est -ne 'device'; $i++) { & $adb connect $d *> $null; $est = "$(& $adb -s $d get-state 2>&1)".Trim(); if ($est -ne 'device') { Start-Sleep 2 } }
+      # Solo avisos y errores (y todo lo de pantalla y arranque): menos texto de la persona que el registro completo (Codex, Gemini).
+      Guardar 'android_log.txt' @("adb: $est"
+        if ($est -eq 'device') {
+          '--- propiedades de arranque ---'; (& $adb -s $d shell "getprop | grep -E 'boot|init.svc|gfx|hwui|ro.build.fingerprint'" 2>&1)
+          '--- memoria ---'; (& $adb -s $d shell 'head -5 /proc/meminfo' 2>&1)
+          '--- registro: avisos y errores, más pantalla y arranque (últimas 20000 líneas) ---'
+          (& $adb -s $d shell 'logcat -d -b all -t 20000 *:W SurfaceFlinger:V surfaceflinger:V gralloc:V EGL:V libEGL:V mesa:V hwcomposer:V BootAnimation:V init:V' 2>&1)
+        })
+    } finally { & $adb kill-server *> $null; if ($pu) { Stop-Process -Id $pu.Id -Force -ErrorAction SilentlyContinue }; $env:ANDROID_ADB_SERVER_PORT = $antes }
+  }
+}
+
 Di (T '  Registros de Windows (últimos 7 días)...' '  Windows event logs (last 7 days)...')
 $desde = (Get-Date).AddDays(-7)
 function Eventos($filtro) {
