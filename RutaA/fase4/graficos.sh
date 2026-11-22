@@ -22,7 +22,7 @@ C
 } > /tmp/prueba_ruta.c
 clang -o /tmp/prueba_ruta /tmp/prueba_ruta.c && /tmp/prueba_ruta
 
-UMD=$(dirname "$(find /usr/lib/wsl/drivers -name libqcdx12arm64wslum.so | head -1)")
+UMD=$(cat $R/umd_ruta.txt)   # el que eligió correr.sh (el que usa Windows)
 for n in libglibcshim.so libdxcore.so libd3d12.so libd3d12core.so libstdc++.so.6 libgcc_s.so.1; do cp $R/system/lib64/$n $G/; done
 for n in libqcdx12arm64wslum.so qcgpuarm64compilercore.so; do cp "$R$UMD/$n" $G/; done
 basename "$UMD" > $G/version_umd.txt   # si Windows actualiza el driver de la GPU, hay que regenerar (UMD y KMD deben casar)

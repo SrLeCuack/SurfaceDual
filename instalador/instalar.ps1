@@ -166,6 +166,31 @@ if ($Origen -ne $Destino -and -not $hecho.Copiado) { Hacer (T "copiar el paquete
     if ((Test-Path $Destino) -and (Get-ChildItem $Destino -Force | Select-Object -First 1)) { throw (T "La carpeta $Destino ya existe y no está vacía. Vacíela o elija otra con: Instalar.cmd -Destino C:\OtraCarpeta" "The folder $Destino already exists and is not empty. Empty it or choose another one with: Instalar.cmd -Destino C:\OtherFolder") }
     & robocopy.exe $Origen $Destino /E /NFL /NDL /NJH /NJS /NP | Out-Null; if ($LASTEXITCODE -ge 8) { throw (T "No se pudo copiar a $Destino" "Could not copy to $Destino") }; Marcar Copiado $true } }
 $f4 = Join-Path $Destino 'RutaA\fase4'
+# Instalación SIN terminar con un Android de otra versión (22/11: con el controlador Adreno 31.0.178 Android se quedaba sin
+# pantalla y la fase 6 esperando siempre; repetir Instalar.cmd no copiaba lo nuevo ni rearmaba). Como el actualizador: se
+# copian los programas nuevos y se rearma Android CONSERVANDO sus datos (puede tenerlos: p. ej. fase 6 fallida en 1.0.4 con
+# Android funcionando; revisión Codex/Gemini). Los discos anteriores quedan como *.anterior hasta que arranque (fase 6).
+$imgNueva = Get-Content (Join-Path $Origen 'instalador\imagen.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
+$imgHecha = Get-Content (Join-Path $Destino 'instalador\imagen_instalada.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($Origen -ne $Destino -and $hecho.Copiado -and -not $hecho.Launcher -and $imgNueva -ne $imgHecha -and (Test-Path (Join-Path $f4 'android.vhdx'))) {
+  Hacer (T 'esta instalación no terminó y su Android es de otra versión: copiar los programas nuevos y rearmar Android (sus datos se conservan, 5-10 minutos)' 'this installation did not finish and its Android is from another version: copy the new programs and rebuild Android (your data is kept, 5-10 minutes)') {
+    & robocopy.exe $Origen $Destino /E /XF *.vhdx *.avhdx *.vhd launcher_instalado.txt imagen_instalada.txt /XD descargas wsl .git /R:3 /W:3 /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw (T "No se pudo copiar a $Destino (código $LASTEXITCODE). Reinicie Windows y repita Instalar.cmd." "Could not copy to $Destino (code $LASTEXITCODE). Restart Windows and run Instalar.cmd again.") }
+    if ((Get-VM -Name $VM -ErrorAction SilentlyContinue).State -notin $null, 'Off') { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $f4 'apagar.ps1') }
+    if ((Get-VM -Name $VM -ErrorAction SilentlyContinue).State -notin $null, 'Off') { throw (T 'Android no se apagó: reinicie Windows y repita Instalar.cmd.' 'Android did not shut down: restart Windows and run Instalar.cmd again.') }
+    # Registro VHDX pendiente si se cortó de golpe: Windows lo aplica al montar y desmontar (como actualizar.ps1).
+    foreach ($r in Get-ChildItem $f4 -Filter '*.vhdx' | ForEach-Object FullName) {
+      if ((Get-VHD -Path $r).Attached) { throw (T "El disco $r está montado en Windows: reinicie Windows y repita Instalar.cmd." "The disk $r is mounted in Windows: restart Windows and run Instalar.cmd again.") }
+      Mount-VHD -Path $r -NoDriveLetter
+      for ($i = 0; $i -lt 5 -and (Get-VHD -Path $r).Attached; $i++) { Dismount-VHD -Path $r -ErrorAction SilentlyContinue; if ((Get-VHD -Path $r).Attached) { Start-Sleep 2 } }
+      if ((Get-VHD -Path $r).Attached) { throw (T "No se pudo desmontar ${r}: reinicie Windows y repita Instalar.cmd." "Could not unmount ${r}: restart Windows and run Instalar.cmd again.") }
+    }
+    & wsl.exe -d $DISTRO -u root -e env PRODUCCION=1 VERIFICADO=0 bash "$(Ruta-Wsl $Destino)/RutaA/fase4/preparar.sh"
+    $fallo = $LASTEXITCODE; & wsl.exe --terminate $DISTRO | Out-Null
+    if ($fallo) { throw (T "No se pudo rearmar Android (código $fallo). Sus datos no se tocaron: repita Instalar.cmd." "Android could not be rebuilt (code $fallo). Your data was not touched: run Instalar.cmd again.") }
+    Copy-Item (Join-Path $Destino 'instalador\imagen.txt') (Join-Path $Destino 'instalador\imagen_instalada.txt')
+  }
+}
 if (-not (Test-Path (Join-Path $f4 'android.vhdx')) -or $Simular) {
   Di (T "  Android con Google Play se descarga de Google (unos 2,2 GB). Sus condiciones: $LICENCIA" "  Android with Google Play is downloaded from Google (about 2.2 GB). Its terms: $LICENCIA")
   if (-not (Preguntar (T '¿Acepta las condiciones de licencia del SDK de Android de Google?' 'Do you accept the license terms of the Google Android SDK?') (T 'ACEPTO' 'ACCEPT'))) { Di (T 'Sin aceptar no se puede descargar Android. Puede repetir Instalar.cmd cuando quiera.' 'Android cannot be downloaded without accepting. You can run Instalar.cmd again whenever you want.') Red; Salir 2 }
@@ -233,6 +258,8 @@ if (-not $hecho.Launcher) {
       $pp = 5556, 15556, 25556, 35556 | Where-Object { Libre $_ } | Select-Object -First 1
       if (-not $pp -or -not $env:ANDROID_ADB_SERVER_PORT) { throw (T 'Windows tiene ocupados los puertos que necesita adb (5037/5556 y alternativos). Reinicie Windows y repita Instalar.cmd.' 'Windows has the ports adb needs (5037/5556 and alternatives) taken. Restart Windows and run Instalar.cmd again.') }
       $d = "127.0.0.1:$pp"
+      # Android rearmado sobre una VM que ya existía: sin este permiso Start-VM da "Acceso denegado" (como iniciar.ps1).
+      if ((Get-VM -Name $VM).State -eq 'Off') { foreach ($r in (Get-VMHardDiskDrive -VMName $VM).Path) { icacls $r /grant "NT VIRTUAL MACHINE\$((Get-VM -Name $VM).Id.Guid):(R,W)" | Out-Null; if ($LASTEXITCODE) { throw (T "No se pudo dar permiso a Android sobre $r." "Could not give Android permission on $r.") } } }
       if ((Get-VM -Name $VM).State -ne 'Running') { Start-VM -Name $VM -ErrorAction Stop }
       $puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, $pp, 5555 -WindowStyle Hidden -PassThru -ErrorAction Stop
       try {
@@ -249,6 +276,7 @@ if (-not $hecho.Launcher) {
         & $adb -s $d shell cmd locale set-device-locale (Etiqueta-Android $Idioma) *> $null
         & $adb -s $d reboot   # el agente de la imagen concede los permisos del launcher al arrancar con él ya instalado
         Marcar Launcher $true
+        Get-ChildItem $f4 -Filter '*.vhdx.anterior' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue   # Android arrancó: ya no hacen falta
       } finally { & $adb kill-server *> $null; Stop-Process -Id $puente.Id -Force -ErrorAction SilentlyContinue }
     }
   } catch { Di (T "  No se completó el primer arranque: $_" "  The first start was not completed: $_") Yellow; Di (T '  Lo demás está instalado. Repita Instalar.cmd para reintentar solo este paso.' '  Everything else is installed. Run Instalar.cmd again to retry only this step.') Yellow }

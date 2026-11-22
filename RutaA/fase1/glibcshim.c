@@ -40,6 +40,11 @@ EXPORT void __syslog_chk(int p, int fl, const char *fmt, ...) { va_list ap; va_s
 
 // glibc 2.38 redirige scanf/strtol a sus versiones C23; para estos usos son equivalentes.
 EXPORT int __isoc23_sscanf(const char *s, const char *fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsscanf(s, fmt, ap); va_end(ap); return r; }
+// Pedidas por el controlador Adreno 31.0.178 (22/11): sin ellas no carga y Android se queda sin gráficos (antes, 31.0.137, no).
+EXPORT int __isoc99_sscanf(const char *s, const char *fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsscanf(s, fmt, ap); va_end(ap); return r; }
+EXPORT wchar_t *__wcsncpy_chk(wchar_t *d, const wchar_t *s, size_t n, size_t dl) { if (n > dl) abort(); return wcsncpy(d, s, n); }
+EXPORT char *nombre_corto __asm__("program_invocation_short_name");   // dato de glibc; Bionic solo tiene getprogname()
+EXPORT char *nombre_largo __asm__("program_invocation_name");          // su gemelo (Gemini)
 EXPORT int __isoc23_scanf(const char *fmt, ...) { va_list ap; va_start(ap, fmt); int r = vscanf(fmt, ap); va_end(ap); return r; }
 EXPORT long __isoc23_strtol(const char *s, char **e, int b) { return strtol(s, e, b); }
 EXPORT long long __isoc23_strtoll(const char *s, char **e, int b) { return strtoll(s, e, b); }
@@ -126,6 +131,8 @@ EXPORT const int **__ctype_toupper_loc(void) { return &p_upper; }
 
 __attribute__((constructor)) static void iniciar(void) {
     extern char **environ;
+    nombre_corto = (char *) getprogname();
+    nombre_largo = nombre_corto;   // shortcut: glibc da la ruta completa; para nombrar el proceso basta
     __environ = environ;
     enlazar_tablas();
     for (int i = -128; i < 256; i++) {

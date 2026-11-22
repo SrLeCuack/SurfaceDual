@@ -112,7 +112,8 @@ if ($imgNueva -and $imgNueva -ne (Get-Content $reciboImg -ErrorAction SilentlyCo
 if (($apkCambia -or (Get-ChildItem $f4 -Filter '*.vhdx.anterior' -ErrorAction SilentlyContinue)) -and -not $SinAndroid) {
   Di (T '  3/4 Actualizar la pantalla de inicio de Android (Android se enciende un momento por detrás)...' '  3/4 Updating the Android home screen (Android starts briefly in the background)...')
   $ok = $false; $listo = $false
-  try { $listo = Conectar; if ($listo) { & $adb -s $d install -r (Join-Path $Destino $apk) *> $null; $ok = -not $LASTEXITCODE } }
+  # set-home-activity también aquí: si Android perdió la app (22/11, apagado de golpe), al reinstalarla volvía la de Google.
+  try { $listo = Conectar; if ($listo) { & $adb -s $d install -r (Join-Path $Destino $apk) *> $null; $ok = -not $LASTEXITCODE; if ($ok) { & $adb -s $d shell cmd package set-home-activity com.surfacedual.launcher/.Inicio *> $null } } }
   catch { } finally {
     Soltar
     if ((Get-VM -Name $VM).State -eq 'Running') { Suspend-VM -Name $VM -ErrorAction SilentlyContinue }   # en pausa hasta que la persona entre

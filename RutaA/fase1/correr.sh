@@ -4,11 +4,18 @@
 set -e
 F1=$(cd "$(dirname "$0")" && pwd); RA=$(dirname "$F1")
 SYS=$RA/../herramientas/ndk/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot
-R=/tmp/rutaa; UMD=$(dirname "$(find /usr/lib/wsl/drivers -name libqcdx12arm64wslum.so | head -1)")
+# UMD: el del controlador que Windows usa AHORA. Tras actualizarlo quedan dos en el DriverStore y "find | head -1" daba el
+# viejo (22/11: 31.0.137 y 31.0.178). Se le pregunta a Windows (interop); si no responde, el más nuevo. graficos.sh usa este.
+R=/tmp/rutaa
+A=$(/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command '(Get-CimInstance Win32_VideoController | Where-Object Name -match Adreno).InstalledDisplayDrivers' 2>/dev/null | grep -o 'qcdx[^\]*' | head -1)
+if [ -n "$A" ] && [ -f "/usr/lib/wsl/drivers/$A/libqcdx12arm64wslum.so" ]; then UMD=/usr/lib/wsl/drivers/$A
+else UMD=$(dirname "$(ls -td /usr/lib/wsl/drivers/*/libqcdx12arm64wslum.so | head -1)"); fi   # shortcut: tras revertir el controlador sin interop elegiría el nuevo; con interop (lo normal) no pasa
+[ -f "$UMD/libqcdx12arm64wslum.so" ] || { echo "ERROR: no se encontró el controlador de la GPU en /usr/lib/wsl/drivers"; exit 1; }
 command -v patchelf >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq patchelf >/dev/null
 CC="clang --target=aarch64-linux-android35 --sysroot=$SYS -fuse-ld=lld -O2 -mno-outline-atomics -nodefaultlibs -lc -ldl -lm"
 
 umount -l $R/dev $R/proc $R/umd_original 2>/dev/null || true; rm -rf $R; mkdir -p $R/system/bin $R/system/lib64 $R/dev $R/proc $R/tmp "$R$UMD" $R/umd_original
+echo "$UMD" > $R/umd_ruta.txt
 $CC -shared -fPIC -fvisibility=hidden -Wl,-soname,libglibcshim.so "$F1/glibcshim.c" -o $R/system/lib64/libglibcshim.so
 $CC -fPIE -pie "$F1/poc.c" -o $R/system/bin/poc
 cp "$RA"/bionic/linker64 $R/system/bin/; cp "$RA"/bionic/*.so $R/system/lib64/
