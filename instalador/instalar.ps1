@@ -266,9 +266,16 @@ if (-not $hecho.Launcher) {
         $listo = $false
         for ($i = 0; $i -lt 60 -and -not $listo; $i++) {   # hasta 5 min
           & $adb connect $d *> $null; $listo = "$(& $adb -s $d shell getprop sys.boot_completed 2>$null)".Trim() -eq '1'
-          if (-not $listo) { Start-Sleep 5 }
+          if (-not $listo) {
+            Start-Sleep 5
+            # Antes esta espera no mostraba nada y parecía colgada (probadores 21-22/11): cada 30 s se dice cuánto lleva y cómo está.
+            if ($i % 6 -eq 5) {
+              $seg = ($i + 1) * 5; $cpu = (Get-VM -Name $VM).CPUUsage; $est = "$(& $adb -s $d get-state 2>&1)".Trim()   # una sola vez (Codex)
+              Di (T "  ...esperando a que Android arranque ($seg s de 300; CPU de la máquina virtual: $cpu %; adb: $est)" "  ...waiting for Android to start ($seg s of 300; virtual machine CPU: $cpu %; adb: $est)") DarkGray
+            }
+          }
         }
-        if (-not $listo) { throw (T 'Android no terminó de arrancar en 5 minutos.' 'Android did not finish starting in 5 minutes.') }
+        if (-not $listo) { throw (T 'Android no terminó de arrancar en 5 minutos. Cierre otros programas y máquinas virtuales (Docker, Cowork de Claude) y repita Instalar.cmd; si sigue igual, abra instalador\Diagnostico.cmd con Android encendido y mande el .zip (incluye el registro de Android).' 'Android did not finish starting in 5 minutes. Close other programs and virtual machines (Docker, Claude Cowork) and run Instalar.cmd again; if it is still the same, open instalador\Diagnostico.cmd with Android on and send the .zip (it includes the Android log).') }
         & $adb -s $d install -r (Join-Path $Destino 'launcher\build\SurfaceDualLauncher.apk'); if ($LASTEXITCODE) { throw (T 'No se pudo instalar la pantalla de inicio.' 'The home screen could not be installed.') }
         & $adb -s $d shell cmd package set-home-activity com.surfacedual.launcher/.Inicio; if ($LASTEXITCODE) { throw (T 'No se pudo poner la pantalla de inicio.' 'The home screen could not be set.') }
         & $adb -s $d shell cmd statusbar add-tile com.surfacedual.launcher/.AWindows; if ($LASTEXITCODE) { throw (T 'No se pudo añadir el botón Cambiar a Windows.' 'The Switch to Windows button could not be added.') }
