@@ -186,7 +186,7 @@ if ($Origen -ne $Destino -and $hecho.Copiado -and -not $hecho.Launcher -and $img
       if ((Get-VHD -Path $r).Attached) { throw (T "No se pudo desmontar ${r}: reinicie Windows y repita Instalar.cmd." "Could not unmount ${r}: restart Windows and run Instalar.cmd again.") }
     }
     & wsl.exe -d $DISTRO -u root -e env PRODUCCION=1 VERIFICADO=0 bash "$(Ruta-Wsl $Destino)/RutaA/fase4/preparar.sh"
-    $fallo = $LASTEXITCODE; & wsl.exe --terminate $DISTRO | Out-Null
+    $fallo = $LASTEXITCODE; Soltar-Wsl
     if ($fallo) { throw (T "No se pudo rearmar Android (código $fallo). Sus datos no se tocaron: repita Instalar.cmd." "Android could not be rebuilt (code $fallo). Your data was not touched: run Instalar.cmd again.") }
     Copy-Item (Join-Path $Destino 'instalador\imagen.txt') (Join-Path $Destino 'instalador\imagen_instalada.txt')
   }
@@ -209,7 +209,7 @@ if (-not (Test-Path (Join-Path $f4 'android.vhdx')) -or $Simular) {
     $r = Ruta-Wsl $Destino
     & wsl.exe -d $DISTRO -u root -e env SD_LICENCIA_GOOGLE=ACEPTO SD_IDIOMA=$Idioma bash "$r/instalador/armar.sh" $r
     if ($LASTEXITCODE) { throw (T 'El armado de Android falló (el motivo está en las líneas de arriba). Repita Instalar.cmd: sigue donde se quedó.' 'Building Android failed (the reason is in the lines above). Run Instalar.cmd again: it continues where it stopped.') }
-    & wsl.exe --terminate $DISTRO | Out-Null
+    Soltar-Wsl
     # Recibo de la versión de Android armada: el actualizador solo rearma cuando cambia (actualizar.ps1).
     Copy-Item (Join-Path $Destino 'instalador\imagen.txt') (Join-Path $Destino 'instalador\imagen_instalada.txt') -ErrorAction SilentlyContinue
   }
@@ -260,7 +260,7 @@ if (-not $hecho.Launcher) {
       $d = "127.0.0.1:$pp"
       # Android rearmado sobre una VM que ya existía: sin este permiso Start-VM da "Acceso denegado" (como iniciar.ps1).
       if ((Get-VM -Name $VM).State -eq 'Off') { foreach ($r in (Get-VMHardDiskDrive -VMName $VM).Path) { icacls $r /grant "NT VIRTUAL MACHINE\$((Get-VM -Name $VM).Id.Guid):(R,W)" | Out-Null; if ($LASTEXITCODE) { throw (T "No se pudo dar permiso a Android sobre $r." "Could not give Android permission on $r.") } } }
-      if ((Get-VM -Name $VM).State -ne 'Running') { Start-VM -Name $VM -ErrorAction Stop }
+      Encender-Android
       $puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, $pp, 5555 -WindowStyle Hidden -PassThru -ErrorAction Stop
       try {
         $listo = $false

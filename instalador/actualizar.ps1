@@ -98,7 +98,7 @@ if ($imgNueva -and $imgNueva -ne (Get-Content $reciboImg -ErrorAction SilentlyCo
     }
     # preparar.sh deja los discos anteriores como *.vhdx.anterior: se borran cuando Android arranca (paso 3/4).
     & wsl.exe -d $DISTRO -u root -e env PRODUCCION=1 VERIFICADO=0 bash "$(Ruta-Wsl $Destino)/RutaA/fase4/preparar.sh" | Out-Null
-    $fallo = $LASTEXITCODE; & wsl.exe --terminate $DISTRO | Out-Null   # que suelte su memoria antes de encender Android (como el instalador)
+    $fallo = $LASTEXITCODE; Soltar-Wsl   # que suelte su memoria antes de encender Android (comun.ps1)
     if ($fallo) { throw (T "No se pudo rearmar Android (código $fallo). Sus datos no se tocaron: repita Actualizar.cmd." "Android could not be rebuilt (code $fallo). Your data was not touched: run Actualizar.cmd again.") }
     foreach ($r in (Get-VMHardDiskDrive -VMName $VM).Path) {   # disco nuevo: sin esto Start-VM da "Acceso denegado" (como iniciar.ps1)
       icacls $r /grant "NT VIRTUAL MACHINE\$((Get-VM -Name $VM).Id.Guid):(R,W)" | Out-Null

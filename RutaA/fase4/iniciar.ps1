@@ -44,7 +44,7 @@ switch ($vm.State) {
     }
     if (-not $arrancada) {
       Get-Process VisorVM -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Process (Join-Path $h 'VisorVM.exe') '--restaurar' -Wait
-      if ($memoria) { Aviso "No hay memoria suficiente para Android ($($tam[-1]) GB). Cierre algunos programas (por ejemplo, pestañas del navegador) y vuelva a intentarlo." "There is not enough memory for Android ($($tam[-1]) GB). Close some programs (for example, browser tabs) and try again." 0 }
+      if ($memoria) { Aviso "No hay memoria suficiente para Android ($($tam[-1]) GB). Cierre algunos programas (por ejemplo, pestañas del navegador) u otras máquinas virtuales (Docker, Windows Sandbox, el modo Cowork de Claude) y vuelva a intentarlo." "There is not enough memory for Android ($($tam[-1]) GB). Close some programs (for example, browser tabs) or other virtual machines (Docker, Windows Sandbox, Claude's Cowork mode) and try again." 0 }
       throw $fallo
     }
     # Si este arranque se cuelga en GRUB (ver vigilar_arranque.ps1), lo corta y arranca otra vez; aparte, para no retener a la Bandeja.

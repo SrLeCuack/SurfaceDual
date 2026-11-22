@@ -37,6 +37,23 @@ function Paquetes-HV([string[]]$nombres) {   # lista de grupos (cada uno, sus ve
     ForEach-Object { [void]$r.Add(@($_.Group | Sort-Object { [version]((($_ -replace '\.mum$') -split '~')[4]) } -Descending)) }
   , $r
 }
+# Tras armar, el Linux auxiliar retiene varios GB unos segundos aunque se cierre y Hyper-V no puede encender Android
+# (0x800705AA, 22/11 en un equipo de 16 GB). Se cierra el nuestro y, si no queda otro Linux abierto, se apaga WSL entero.
+function Soltar-Wsl {
+  & wsl.exe --terminate $DISTRO 2>$null | Out-Null
+  $vivas = "$(& wsl.exe --list --running --quiet 2>$null)" -replace "[`0\s]", ''
+  if (-not $LASTEXITCODE -and -not $vivas) { & wsl.exe --shutdown 2>$null | Out-Null }   # si la consulta falla, no se apaga (Codex)
+}
+# Encender Android reintentando 2 min (la memoria se libera sola en segundos); si no, un error que explica qué cerrar.
+function Encender-Android {
+  for ($k = 0; $k -lt 12 -and (Get-VM -Name $VM).State -ne 'Running'; $k++) {
+    try { Start-VM -Name $VM -ErrorAction Stop } catch { $e1 = $_; if ("$e1" -notmatch '0x800705AA|RAM|memor') { throw }; Start-Sleep 10 }   # solo la memoria se espera
+  }
+  if ((Get-VM -Name $VM).State -ne 'Running') {
+    if ("$e1" -match '0x800705AA|RAM|memor') { throw (T "Windows no tiene $([math]::Round((Get-VM -Name $VM).MemoryStartup / 1GB)) GB libres para Android. Cierre programas que usen mucha memoria y otras máquinas virtuales (por ejemplo Docker, Windows Sandbox o el modo Cowork de Claude) y repita. Detalle: $e1" "Windows does not have $([math]::Round((Get-VM -Name $VM).MemoryStartup / 1GB)) GB free for Android. Close programs that use a lot of memory and other virtual machines (for example Docker, Windows Sandbox or Claude's Cowork mode) and try again. Details: $e1") }
+    throw $e1
+  }
+}
 function Di([string]$t, [string]$color = 'Gray') { Write-Host $t -ForegroundColor $color }
 function Titulo([string]$t) { Di ''; Di "== $t ==" Cyan }
 function Pasos([string]$titulo, [string[]]$lineas) {   # lo que exige a una persona: lista numerada, un paso por línea
