@@ -28,6 +28,9 @@ It is an alternative to Windows Subsystem for Android (WSA), which Microsoft dis
 - **Touch gesture with the keyboard detached:** hold three fingers still on the screen for about 0.7 s to switch between
   Windows and Android, both ways (idea and first version by BeShO-ShO). `HKCU\Software\SurfaceDual`: `GestoDedos` (3, or 0 to
   turn it off) and `GestoMs` (700).
+- **Android sees the real hardware:** it reports the Surface's Qualcomm chip (read from Windows, e.g. X1E80100) instead of
+  the emulator it was built from, so apps treat it as a real device. For example, the **Google Meet** app uses the real
+  microphone and speaker in calls (it used a silent placeholder when it thought it was on an emulator).
 - **Watched boot:** if Android hangs while starting, it restarts by itself.
 - **Production build:** Android is not debuggable; only your own PC can connect to Android, with its key.
 
@@ -95,9 +98,6 @@ including the crash file; send that one privately. Open a GitHub Issue (or send 
 - Bluetooth is off inside Android (Windows keeps the radio; Android's sound already goes through Windows). Because of that,
   three Settings screens close by themselves: Connected devices, Sound & vibration, and Help & feedback (reported by
   BeShO-ShO). All the other Settings screens work.
-- **Google Meet: use it in Chrome inside Android**, where sound and microphone work. In the Meet app, calls connect but
-  have no sound: the app doesn't start its audio on this device. The missing earpiece it asked for was added in 1.0.18,
-  but that alone isn't enough (reported by BeShO-ShO).
 
 ### Why Netflix does not work
 

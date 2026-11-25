@@ -136,6 +136,24 @@ bash "$F/graficos.sh" $V $W/graficos.erofs   # Mesa d3d12 + D3D12 + UMD de Qualc
 bash "$F/hal/camara/compilar.sh" $V >/dev/null   # cámaras de Windows (HvCamara.exe, vsock 5007) en lugar de las emuladas
 bash "$F/hal/sensores/compilar.sh" $V >/dev/null   # sensores reales de la Surface (HvSensores.exe, vsock 5009)
 bash "$F/carpetas/instalar.sh" $V   # carpetas de Windows en /data/media/0 por 9P (HvCarpetas.exe, vsock 5008)
+# Identidad real (pedido del usuario 25/11: integración nativa, no simulada): ro.hardware=surfacedual (bootconfig, abajo) en
+# vez de "ranchu", el nombre del emulador. Con "ranchu" la app de Meet se creía en un emulador y usaba un motor de voz falso
+# (llamadas sin sonido ni micrófono, issue #5; leído en su código: Build.HARDWARE == goldfish/ranchu/cutf_cvm/starfish).
+# "surfacedual" y no "qcom": la GPU va por D3D12, no por el BSP Android de Qualcomm (Codex, Gemini). init carga
+# /vendor/etc/init/hw/init.${ro.hardware}.rc (se renombra) y la zram usaba fstab.${ro.hardware} (sigue con el de siempre).
+sed -i 's|swapon_all /vendor/etc/fstab.${ro.hardware}|swapon_all /vendor/etc/fstab.ranchu|' $V/etc/init/hw/init.ranchu.rc
+grep -q 'swapon_all /vendor/etc/fstab.ranchu' $V/etc/init/hw/init.ranchu.rc || { echo "ERROR: swapon_all no encontrado"; exit 1; }
+mv $V/etc/init/hw/init.ranchu.rc $V/etc/init/hw/init.surfacedual.rc
+setfattr -n security.selinux -v u:object_r:vendor_configs_file:s0 $V/etc/init/hw/init.surfacedual.rc
+# Chip real de esta Surface, leído de Windows (X1E80100, X1P64100...): el vendor del emulador decía AOSP/ranchu. Sin lectura
+# válida se deja como estaba (nada inventado). cat conserva la etiqueta SELinux de build.prop.
+# Modelos: X1E80100, X1P64100, X1-26-100, X2... (Gemini). Desde /mnt/c y con tiempo límite: el interop de WSL es lento a veces.
+SOC=$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -Command '(Get-CimInstance Win32_Processor).Name' 2>/dev/null | grep -oE 'X[0-9][A-Z0-9-]*[0-9]' | head -1)
+if [ -n "$SOC" ]; then
+  sed -e 's/^ro.soc.manufacturer=.*/ro.soc.manufacturer=Qualcomm/' -e "s/^ro.soc.model=.*/ro.soc.model=$SOC/" $V/build.prop > $W/build.prop
+  cat $W/build.prop > $V/build.prop
+  grep -qx "ro.soc.model=$SOC" $V/build.prop && grep -qx "ro.soc.manufacturer=Qualcomm" $V/build.prop || { echo "ERROR: ro.soc.*"; exit 1; }
+else echo "aviso: no se pudo leer el modelo del procesador en Windows; ro.soc.* queda como en el vendor"; fi
 mkfs.erofs -zlz4hc,12 -b4096 -C16384 -T1230768000 -Ufa639d88-7274-5c53-a140-a3d0858c0e11 --mount-point=/vendor $W/vendor_hv.erofs $V >/dev/null
 VO=734003200; VMAX=68796416; [ $(stat -c %s $W/vendor_hv.erofs) -le $VMAX ] || { echo "vendor_hv no cabe"; exit 1; }   # offset y hueco de vendor en super
 # Árbol de hash de dm-verity al final de la partición (siempre: sin "avb" en el fstab nadie lo lee).
@@ -148,7 +166,7 @@ src = open(sys.argv[1], encoding='utf-8').read()
 pares = dict(re.findall(r"'([a-z0-9_.]+)':\s*'([^']*)'", src))
 pares.pop('boot_devices', None)
 pares.pop('selinux', None)   # imagen user: init lo ignora y SELinux queda en enforcing (medido 17/11); no aparentar otra cosa
-pares.update({'boot_part_uuid': '58f96366-3c87-4bc2-add4-e423a556e2fd', 'fstab_suffix': 'hyperv', 'hardware': 'ranchu',
+pares.update({'boot_part_uuid': '58f96366-3c87-4bc2-add4-e423a556e2fd', 'fstab_suffix': 'hyperv', 'hardware': 'surfacedual',
               'verifiedbootstate': 'orange', 'console': 'ttyAMA0'})
 # Número de serie: el REAL de la Surface donde se instala (Win32_BIOS, usuario 18/11), leído en cada armado; nunca va al repo
 # (solo /opt/fase4). Sin serie válido (BIOS vacía, "To be filled", ceros) queda el ya guardado o uno propio SD+12 hex.
