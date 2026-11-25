@@ -10,6 +10,10 @@ if ($c -and $c.LastWriteTime -gt (Get-Date).AddHours(-1)) {
   [void](New-Object -ComObject WScript.Shell).Popup($(if ($en) { 'Surface Dual is updating Android. Wait until the update window says it is done.' } else { 'Surface Dual está actualizando Android. Espere a que la ventana de actualización diga que terminó.' }), 10, 'Surface Dual', 64)
   Get-Process VisorVM -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Process (Join-Path $h 'VisorVM.exe') '--restaurar' -Wait; exit 1
 }
+# Menos de 24 GB: antes de encender Android se congelan los programas de Windows y se vacía su memoria (pantallas azules de
+# dxgmms2 con la RAM y la memoria de vídeo llenas, ESTADO.md 175). Al volver a Windows: pausar.ps1 o el Visor los descongelan.
+if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -lt 24) { try { & (Join-Path $PSScriptRoot 'congelar.ps1') -Accion Congelar | Out-Null } catch { } }
+trap { try { & (Join-Path $PSScriptRoot 'congelar.ps1') -Accion Descongelar } catch { }; break }   # Android no arrancó: Windows, tal como estaba
 $vm = Get-VM -Name $n -ErrorAction SilentlyContinue
 if (-not $vm) { & (Join-Path $PSScriptRoot 'crear_vm.ps1') -Segundos 2 | Out-Null; $vm = Get-VM -Name $n }
 switch ($vm.State) {

@@ -971,6 +971,28 @@ class VisorVM : Form
             }
     }
 
+    // Equipos de menos de 24 GB (pantallas azules de dxgmms2 con la RAM y la memoria de vídeo llenas, ESTADO.md 175): antes de
+    // reanudar Android se congelan los programas de Windows y se vacía su memoria; tras pausarlo, se descongelan. Lo hace
+    // congelar.ps1 (la misma regla que en frío con iniciar.ps1); aquí, en este hilo, para que vaya en orden con pausar/reanudar.
+    static readonly bool congelar = MemoriaTotalGB() < 24;
+    static double MemoriaTotalGB()
+    {
+        try { using (var s = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
+                foreach (ManagementObject o in s.Get()) return Convert.ToDouble(o["TotalPhysicalMemory"]) / (1L << 30); }
+        catch (Exception) { }
+        return 99;   // sin saberlo, no se congela nada
+    }
+    static void Congelar(bool si)
+    {
+        try
+        {
+            string ps1 = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "congelar.ps1");
+            using (var p = Process.Start(new ProcessStartInfo("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -File \"" + ps1 + "\" -Accion " + (si ? "Congelar" : "Descongelar"))
+                { UseShellExecute = false, CreateNoWindow = true }))
+                if (!p.WaitForExit(15000)) try { p.Kill(); } catch (Exception) { }   // ~1 s medido; colgado, se corta (lo hecho queda anotado)
+        }
+        catch (Exception e) { Trace.WriteLine("congelar: " + e.Message); }
+    }
     // Pausar (9) y reanudar (2) en orden de llegada, fuera del hilo de la interfaz (Msvm_ComputerSystem.RequestStateChange).
     void HiloVm()
     {
@@ -985,6 +1007,8 @@ class VisorVM : Form
                         "SELECT * FROM Msvm_ComputerSystem WHERE Name='" + vmId.ToString().ToUpperInvariant() + "'"))
                         foreach (ManagementObject o in s.Get()) vm = o;
                 if (vm == null) continue;
+                // Solo con Android a la vista: Avisos.cs reanuda la VM cada 15 min con Windows delante (Gemini).
+                if (estado == 2 && congelar && visible.WaitOne(0)) Congelar(true);   // primero congelar y limpiar Windows, después reanudar Android
                 if (estado == 9) { vmActiva.Reset(); MusicaCompartida.Quitar(); }   // antes de pausar: nadie reintenta contra la VM congelada; sus botones no responderían
                 var p = vm.GetMethodParameters("RequestStateChange");
                 p["RequestedState"] = estado;
@@ -999,6 +1023,7 @@ class VisorVM : Form
                 }
                 // Tras desbloquear Windows o salir del reposo no llega OnActivated ni hay cuadro nuevo: quedaba negro (0.c, 16/11).
                 // Oculto (ventana de avisos): sin la tecla de despertar, la pantalla de Android sigue como estaba.
+                if (estado == 9 && congelar) Congelar(false);   // ya en pausa: Windows vuelve tal como estaba
                 if (estado == 2)
                 {
                     BeginInvoke((Action)(() => { if (visible.WaitOne(0)) { Despertar(); Invalidate(); } }));
@@ -1107,6 +1132,7 @@ class VisorVM : Form
         visible.Reset();
         GestosWindows(true);
         Silencioso();   // terminar y visible ya dicen "fuera": todo vuelve a lo de Windows
+        if (congelar) Congelar(false);   // Visor cerrado: los programas de Windows, tal como estaban (Gemini)
         Pantalla120(false);
         try { sockActual?.Close(); } catch { }
         try { entrada?.Close(); } catch { } entrada = null;

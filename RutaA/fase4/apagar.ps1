@@ -6,6 +6,7 @@ function Salir { if ($f) { $f | ForEach-Object { "{0:s} apagar.ps1: {1}" -f (Get
 Get-Process VisorVM, HvAudio, HvCamara, HvSensores, HvMdns -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue -ErrorVariable +f
 # Visor muerto de golpe con Android delante: Windows quedaba a 48 Hz, sin giro y con el umbral de ahorro al 100 %.
 Get-Process VisorVM -ErrorAction SilentlyContinue | Wait-Process -Timeout 5 -ErrorAction SilentlyContinue
+try { & (Join-Path $PSScriptRoot 'congelar.ps1') -Accion Descongelar } catch { }   # Visor ya cerrado: los programas de Windows, tal como estaban
 Start-Process (Join-Path $PSScriptRoot 'host\VisorVM.exe') '--restaurar' -Wait -ErrorAction SilentlyContinue -ErrorVariable +f
 $vm = Get-VM -Name $n -ErrorAction SilentlyContinue
 if (-not $vm -or $vm.State -eq 'Off') { Get-Process HvCarpetas -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue -ErrorVariable +f; Salir }
