@@ -65,7 +65,7 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
             ultimaConsulta = Environment.TickCount;
             var est = Estado();
             icono.Text = est == EstadoAndroid.Apagado ? Idioma.T("Surface Dual: Android apagado (no ocupa RAM)", "Surface Dual: Android is off (uses no RAM)")
-                       : est == EstadoAndroid.Suspendido ? Idioma.T("Surface Dual: Android en pausa (ocupa 12 GB)", "Surface Dual: Android is paused (uses 12 GB)")
+                       : est == EstadoAndroid.Suspendido ? Idioma.T("Surface Dual: Android en pausa (ocupa " + MemoriaEnUsoGB + " GB)", "Surface Dual: Android is paused (uses " + MemoriaEnUsoGB + " GB)")
                        : est == EstadoAndroid.Encendiendo ? Idioma.T("Surface Dual: Android encendiendo", "Surface Dual: Android is starting") : Idioma.T("Surface Dual: Android activo", "Surface Dual: Android is running");
         };
         menu.Items.Add(Idioma.T("Salir", "Exit"), null, (s, e) => { icono.Visible = false; Application.Exit(); });
@@ -75,9 +75,11 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
         var ui = new Control(); ui.CreateControl();   // para volver al hilo de la interfaz desde la espera del aviso
         new Thread(() => { while (pedido.WaitOne()) ui.BeginInvoke((Action)Entrar); }) { IsBackground = true }.Start();
         var postura = new Postura();   // quitar/poner el teclado (o doblarlo) cambia de sistema
+        var tresDedos = new TresDedos();   // 3 dedos quietos ~0,7 s también cambia de sistema (Gesto.cs, issue #7)
         if (entrar) Entrar();
         Application.Run();
         GC.KeepAlive(unica);
+        GC.KeepAlive(tresDedos);
         GC.KeepAlive(postura);   // NativeWindow solo guarda una referencia débil: sin esto el GC la recoge y se pierde la postura
     }
 
@@ -377,7 +379,7 @@ static partial class Bandeja   // el panel rápido está en Panel.cs
         }
     }
 
-    static void Apagar() { Script("apagar.ps1"); }   // apagado ordenado; libera los 12 GB
+    static void Apagar() { Script("apagar.ps1"); }   // apagado ordenado; libera su memoria
     // Ícono propio dibujado al vuelo (verde Android, "A"), sin archivos extra.
     static Icon Icono()
     {

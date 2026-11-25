@@ -7,4 +7,4 @@ cd "$(dirname "$0")"; F='C:\Windows\Microsoft.NET\FrameworkArm64\v4.0.30319'; W=
   -r:"$F\mscorlib.dll" -r:"$F\System.dll" -r:"$F\System.Core.dll" -r:"$F\System.Drawing.dll" \
   -r:"$F\System.Windows.Forms.dll" -r:"$F\System.Management.dll" \
   -r:"$F\System.Runtime.dll" -r:"$F\System.Runtime.WindowsRuntime.dll" -r:"$W\Windows.winmd" \
-  -out:"${1:-Bandeja.nuevo.exe}" Bandeja.cs Panel.cs
+  -out:"${1:-Bandeja.nuevo.exe}" Bandeja.cs Panel.cs Gesto.cs

@@ -5,7 +5,7 @@ $DATOS = Join-Path $env:ProgramData 'SurfaceDual'   # estado del instalador (pre
 $QCOM = 'HKLM:\SOFTWARE\QCOM\Drivers\DxKMD'; $QVALOR = 'DisableParavirtOtherVirtualContext'
 $SID_HV = 'S-1-5-32-578'   # "Administradores de Hyper-V": por SID, el nombre cambia con el idioma
 $CARACT = 'Microsoft-Hyper-V-All', 'Microsoft-Hyper-V', 'HypervisorPlatform', 'VirtualMachinePlatform', 'Microsoft-Windows-Subsystem-Linux'
-$MIN_RAM_GB = 15.5   # 16 GB nominales: la VM pide 8 GB fijos (crear_vm.ps1) y Windows necesita el resto
+$MIN_RAM_GB = 15.5   # 16 GB nominales: la VM pide 4 GB con 16 (crear_vm.ps1) y Windows necesita el resto
 $MIN_DISCO_GB = 64   # suposición: descargas ~3 GB + imagen ~8 GB + discos de Android recién armados ~25 GB + margen
 function Salir([int]$c) { if (-not $Simular -and (Es-Admin)) { [void](Read-Host (T "Pulse Intro para cerrar esta ventana" "Press Enter to close this window")) }; exit $c }   # la ventana elevada se cerraría sin dejar leer
 $Simular = $false; $Cambios = New-Object System.Collections.ArrayList
@@ -127,7 +127,7 @@ function Evaluar-Equipo($e) {
   else { Nota 'Procesador' OK $e.Cpu }
   if ($e.Build -lt 26100) { Nota 'Windows' BLOQUEA (T "Hace falta Windows 11 24H2 (compilación 26100) o posterior; este tiene la $($e.Build). Actualice Windows y vuelva a probar." "Windows 11 24H2 (build 26100) or later is required; this PC has build $($e.Build). Update Windows and try again.") }
   else { Nota 'Windows' OK (T "Windows 11, compilación $($e.Build), edición $($e.Edicion)" "Windows 11, build $($e.Build), edition $($e.Edicion)") }
-  if ($e.RamGB -lt $MIN_RAM_GB) { Nota 'Memoria' BLOQUEA (T "Hacen falta 16 GB de memoria; este equipo tiene $($e.RamGB) GB (Android usa 8 GB fijos)." "16 GB of memory is required; this PC has $($e.RamGB) GB (Android uses a fixed 8 GB).") }
+  if ($e.RamGB -lt $MIN_RAM_GB) { Nota 'Memoria' BLOQUEA (T "Hacen falta 16 GB de memoria; este equipo tiene $($e.RamGB) GB (Android usa 4 GB y Windows necesita el resto)." "16 GB of memory is required; this PC has $($e.RamGB) GB (Android uses 4 GB and Windows needs the rest).") }
   else { Nota 'Memoria' OK "$($e.RamGB) GB" }
   if (-not (Ruta-Valida $e.Destino)) { Nota 'Carpeta' BLOQUEA (T "La carpeta de instalación '$($e.Destino)' no vale: sin espacios, acentos ni eñes (por ejemplo C:\SurfaceDual)." "The install folder '$($e.Destino)' is not valid: no spaces or accented letters (for example C:\SurfaceDual).") }
   elseif ($null -eq $e.LibreGB) { Nota 'Disco' BLOQUEA (T "No existe la unidad de '$($e.Destino)'." "The drive of '$($e.Destino)' does not exist.") }

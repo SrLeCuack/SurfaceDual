@@ -25,6 +25,9 @@ Es una alternativa al Subsistema de Windows para Android (WSA), que Microsoft re
   dividida y Circle to Search.
 - **Con el teclado puesto, gestos del trackpad:** tres dedos hacia abajo muestran el escritorio de Windows y lo que suena en Android
   sigue sonando; tres dedos a los lados cambian entre Android y Windows.
+- **Gesto táctil con el teclado quitado:** mantén tres dedos quietos en la pantalla unos 0,7 s para cambiar entre Windows y
+  Android, en los dos sentidos (idea y primera versión de BeShO-ShO). `HKCU\Software\SurfaceDual`: `GestoDedos` (3, o 0 para
+  apagarlo) y `GestoMs` (700).
 - **Arranque vigilado:** si Android se cuelga al encender, se reinicia solo.
 - **Versión de producción:** Android no depurable; solo tu propio PC puede conectarse a Android, con su clave.
 
@@ -41,14 +44,18 @@ En esta prueba de lectura, Android gastó **un 38 % menos** que Edge en Windows.
 
 - Equipo **ARM64 con chip Qualcomm Snapdragon X** (gráfica Adreno) y **Windows 11**. Solo se ha probado en una Surface Pro 11.
   **No funciona en PCs con Intel o AMD (x86/x64):** el instalador lo comprueba primero y se detiene sin cambiar nada.
-- **16 GB de RAM** (Android usa 6 GB mientras está encendido con 16 GB, 8 GB con 32 GB) y **64 GB libres** en disco.
+- **16 GB de RAM** (Android usa 4 GB mientras está encendido con 16 GB, 8 GB con 32 GB; `MemoriaVmGB` en `HKCU\Software\SurfaceDual` lo fija a mano) y **64 GB libres** en disco.
   **Con 16 GB la memoria va justa.** Algunos probadores con 16 GB tuvieron pantallas azules (error 0x139 en `dxgmms2.sys`, el
   administrador de memoria gráfica de Windows) usando Android con la memoria casi llena. Por eso, en equipos de menos de 24 GB,
   Surface Dual **congela tus programas de Windows y libera su memoria mientras Android está en pantalla** (navegadores, Claude,
   Codex, Office, Teams, Discord, Spotify…, aunque estén en la bandeja) y los descongela tal como estaban al volver a Windows. Si
   hay otras máquinas virtuales encendidas (el Cowork de Claude, WSL, Docker), te pide cerrarlas, porque no se pueden pausar sin
-  riesgo. Esto busca evitar esas pantallas azules, pero aún no está confirmado en una Surface de 16 GB. Para la experiencia más
-  estable, cierra los programas pesados y otras máquinas virtuales antes de abrir Android. Con 32 GB nada de esto hace falta.
+  riesgo. Desde la 1.0.18 Android además usa **4 GB en vez de 6** en estos equipos: un probador con una Surface de 16 GB
+  (BeShO-ShO) vio que con 6 GB a Windows le quedaban unos 60 MB libres, y con 4 GB, dos días sin problemas. El precio: Android
+  recarga algunas apps al volver a ellas. Si prefieres 6 GB, activa **Más memoria a Android** en el panel rápido de la bandeja
+  (solo aparece en estos equipos) y cierra del todo tus programas de Windows mientras usas Android; se aplica la próxima vez
+  que Android arranque. Para la experiencia más estable, cierra los programas pesados y otras máquinas virtuales antes de abrir
+  Android. Con 32 GB nada de esto hace falta.
 - Una cuenta de **administrador** de Windows e Internet: se descargan unos 2,2 GB de Android, más Ubuntu y herramientas.
 - Hyper-V. En Windows 11 **Home** el instalador lo activa de forma **experimental**, y solo si escribes `SI` para confirmarlo.
 
@@ -86,6 +93,12 @@ Issue en GitHub (o manda un mensaje directo) con el `.zip`.
 - YouTube llega como máximo a 1080p60. Netflix no funciona ([por qué](#por-qué-no-funciona-netflix)).
 - Las alarmas de Android no suenan mientras estás en Windows, porque Android está en pausa.
 - Con los gestos del trackpad, Android no se pone en pausa hasta que vuelves a él.
+- El Bluetooth está apagado dentro de Android (Windows se queda con la radio; el sonido de Android ya sale por Windows). Por
+  eso tres pantallas de Ajustes se cierran solas: Dispositivos conectados, Sonido y vibración, y Ayuda y comentarios
+  (lo reportó BeShO-ShO). Todas las demás pantallas de Ajustes funcionan.
+- **Google Meet: úsalo en Chrome dentro de Android**, donde el sonido y el micrófono funcionan. En la app de Meet las
+  llamadas conectan pero sin sonido: la app no arranca su audio en este equipo. En la 1.0.18 se añadió el auricular que
+  pedía, pero eso solo no basta (lo reportó BeShO-ShO).
 
 ### Por qué no funciona Netflix
 

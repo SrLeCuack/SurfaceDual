@@ -25,7 +25,22 @@ if (-not (Preguntar (T "Se va a quitar Surface Dual de este equipo ($Destino). �
 
 Hacer (T 'cerrar los programas de Surface Dual (Bandeja, Visor y ayudantes)' 'close the Surface Dual programs (tray icon, viewer and helpers)') {
   Get-Process Bandeja, VisorVM, HvAudio, HvCamara, HvSensores, HvCarpetas, HvMdns, HvPuente -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -like "$Destino\*" } | Stop-Process -Force -ErrorAction SilentlyContinue   # solo los de ESTA instalación
+    Where-Object { $_.Path -like "$Destino\*" } | Stop-Process -Force -PassThru -ErrorAction SilentlyContinue |
+    Wait-Process -Timeout 10 -ErrorAction SilentlyContinue   # solo los de ESTA instalación; esperar: si no, --restaurar ve su mutex y sale (Codex, Gemini)
+}
+# Issue #3 (BeShO-ShO): si el Visor se cerró de golpe con Android delante, Windows podía quedarse con la frecuencia virtual, el
+# giro bloqueado o el umbral de ahorro cambiado, y el desinstalador no lo devolvía. Lo hace el propio Visor (--restaurar), antes
+# de borrar sus valores de HKCU; si algo queda, se dice cómo ponerlo a mano. También se descongelan los programas (congelar.ps1).
+Hacer (T 'devolver la pantalla de Windows a como estaba (frecuencia, giro y ahorro de batería) y descongelar sus programas' 'put the Windows display back as it was (refresh rate, rotation and battery saver) and unfreeze its programs') {
+  $visor = Join-Path $f4 'host\VisorVM.exe'
+  if (Test-Path $visor) { Start-Process $visor '--restaurar' -Wait -ErrorAction SilentlyContinue }
+  try { & (Join-Path $f4 'congelar.ps1') -Accion Descongelar } catch { }
+  $p = Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue; $quedan = @()
+  if (Test-Path (Join-Path $env:TEMP 'visorvm_hz_virtual.txt')) { $quedan += T 'Configuración > Sistema > Pantalla > Pantalla avanzada: elija su frecuencia de actualización de siempre.' 'Settings > System > Display > Advanced display: choose your usual refresh rate.' }
+  if ($p.GiroBloqueado -eq 1) { $quedan += T 'Configuración > Sistema > Pantalla: desactive "Bloqueo de giro".' 'Settings > System > Display: turn off "Rotation lock".' }
+  if ($null -ne $p.UmbralAhorroPlan) { $quedan += T 'Configuración > Sistema > Energía y batería > Ahorro de batería: ponga el umbral que usaba.' 'Settings > System > Power & battery > Battery saver: set the threshold you used.' }
+  if (Get-Content (Join-Path $env:TEMP 'surfacedual_congelados.txt') -ErrorAction SilentlyContinue) { $quedan += T 'Reinicie Windows: algunos programas siguen congelados y así vuelven a funcionar.' 'Restart Windows: some programs are still frozen, and a restart brings them back.' }   # la lista se borra después (Codex)
+  if ($quedan) { Pasos (T 'No se pudo devolver todo solo. Hágalo a mano:' 'Not everything could be restored automatically. Please do it by hand:') $quedan }
 }
 if ($hecho.VmCreada) { Hacer (T "apagar y quitar la máquina virtual '$VM'" "shut down and remove the virtual machine '$VM'") {
     # Solo la que creó el instalador (mismo Id): otra con el mismo nombre no se toca.
@@ -49,6 +64,16 @@ if (-not $previo.RegistroUsuario) { Hacer (T 'devolver los gestos de 3 y 4 dedos
   } }
 elseif ($hecho.Idioma) { Hacer (T 'quitar el idioma guardado de Surface Dual' 'remove the saved Surface Dual language') {   # la clave ya existía antes: solo lo nuestro, y si ya tenía un idioma, ese
     if ($previo.Idioma) { Set-ItemProperty $CLAVE -Name Idioma -Value $previo.Idioma } else { Remove-ItemProperty $CLAVE -Name Idioma -ErrorAction SilentlyContinue } } }
+# Issue #3: registros de %TEMP% y la clave de adb que creó el instalador (solo si su .pub termina en surfacedual@armado, como la
+# escribe armar.sh: una clave propia de la persona para otros aparatos no se toca; la carpeta .android solo si queda vacía).
+Hacer (T 'borrar los registros temporales y la clave de adb que creó el instalador' 'delete the temporary logs and the adb key the installer created') {
+  Get-Item (Join-Path $env:TEMP 'visorvm_*'), (Join-Path $env:TEMP 'surfacedual_*') -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+  $a = Join-Path $env:USERPROFILE '.android'
+  if ("$(Get-Content (Join-Path $a 'adbkey.pub') -Raw -ErrorAction SilentlyContinue)".Trim() -like '* surfacedual@armado') {
+    Remove-Item (Join-Path $a 'adbkey'), (Join-Path $a 'adbkey.pub') -Force -ErrorAction SilentlyContinue
+    if (-not (Get-ChildItem $a -Force -ErrorAction SilentlyContinue)) { Remove-Item $a -Force -ErrorAction SilentlyContinue }
+  }
+}
 Hacer (T 'borrar la caché de gráficos (%LOCALAPPDATA%\SurfaceDual)' 'delete the graphics cache (%LOCALAPPDATA%\SurfaceDual)') { Remove-Item (Join-Path $env:LOCALAPPDATA 'SurfaceDual') -Recurse -Force -ErrorAction SilentlyContinue }
 if ($hecho.Distro -and $previo.Distros -notcontains $DISTRO) { Hacer (T "quitar el Linux auxiliar '$DISTRO'" "remove the helper Linux '$DISTRO'") { & wsl.exe --unregister $DISTRO | Out-Null } }
 if ($hecho.QcomPuesta) { Hacer (T 'devolver el ajuste del controlador Qualcomm a como estaba' 'put the Qualcomm driver setting back as it was') {

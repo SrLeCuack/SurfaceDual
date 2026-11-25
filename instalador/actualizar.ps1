@@ -60,12 +60,13 @@ function Conectar {
   $env:ANDROID_ADB_SERVER_PORT = "$(5037, 15037, 25037, 35037 | Where-Object { Libre $_ } | Select-Object -First 1)"
   $pp = 5556, 15556, 25556, 35556 | Where-Object { Libre $_ } | Select-Object -First 1; $script:d = "127.0.0.1:$pp"
   if (-not $pp -or -not $env:ANDROID_ADB_SERVER_PORT -or -not (Test-Path $adb)) { return $false }
-  if ((Get-VM -Name $VM).State -eq 'Off' -and (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -lt 24) { Set-VM -Name $VM -MemoryStartupBytes 6GB }   # como iniciar.ps1
+  if ((Get-VM -Name $VM).State -eq 'Off' -and (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -lt 24) { Set-VM -Name $VM -MemoryStartupBytes $(if (((Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue).MemoriaVmGB -as [int]) -ge 6) { 6GB } else { 4GB }) }   # como iniciar.ps1 (4 con 16 GB, issue #2; 6 si la persona lo eligió en el panel)
   # Recién rearmado, el Linux auxiliar puede retener memoria unos segundos aunque se cierre (medido 20/11: 'no se pueden asignar
   # 8192 MB' en un equipo de 32 GB): se reintenta 2 min.
   if ((Get-VM -Name $VM).State -eq 'Paused') { Resume-VM -Name $VM }
   for ($k = 0; $k -lt 12 -and (Get-VM -Name $VM).State -ne 'Running'; $k++) { try { Start-VM -Name $VM -ErrorAction Stop } catch { Start-Sleep 10 } }
   if ((Get-VM -Name $VM).State -ne 'Running') { return $false }
+  Set-ItemProperty 'HKCU:\Software\SurfaceDual' MemoriaActualGB ([int]((Get-VM -Name $VM).MemoryStartup / 1GB)) -Type DWord -ErrorAction SilentlyContinue   # para el panel, como iniciar.ps1 (Codex, Gemini)
   $script:puente = Start-Process (Join-Path $f4 'host\HvPuente.exe') -ArgumentList $hecho.VmId, $pp, 5555 -WindowStyle Hidden -PassThru
   for ($i = 0; $i -lt 60; $i++) { & $adb connect $script:d *> $null; if ("$(& $adb -s $script:d shell getprop sys.boot_completed 2>$null)".Trim() -eq '1') { return $true }; Start-Sleep 5 }
   $false

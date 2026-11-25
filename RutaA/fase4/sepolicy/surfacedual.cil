@@ -104,6 +104,8 @@
 ; Miniaturas de Recientes (ayudante del agente, uid shell en este dominio): HWUI pide a SurfaceFlinger su conexión de vsync y
 ; SF devuelve un binder; sin esto "avc denied { transfer } surfaceflinger" y el ayudante abortaba cada 3 s (medido 17/11).
 (allow surfaceflinger_202604 surfacedual_agente (binder (call transfer)))
+; audioserver devuelve llamadas al agente (aviso de volumen) al empezar una llamada: avc denied { call } x16 (issue #5).
+(allow audioserver_202604 surfacedual_agente (binder (call transfer)))
 ; Órdenes "sh -c ..." del agente (settings, appops, cmd, am, input, dumpsys): corren en el dominio shell (el de adb shell,
 ; revisado por AOSP) en lugar de heredar el del agente; siguen como uid 0 para que system_server las acepte.
 ; Resultado: el tipo de la plataforma (shell_202604 es un atributo y typetransition exige un tipo).

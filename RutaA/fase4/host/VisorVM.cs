@@ -1180,7 +1180,7 @@ class VisorVM : Form
             try
             {
                 s = new Socket((AddressFamily)34, SocketType.Stream, (ProtocolType)1); // HV_PROTOCOL_RAW
-                s.Connect(ep);
+                s.Connect(ep); vistaEncendida = true;   // conectó: Android estaba encendido (Codex, Gemini)
                 sockActual = s;
 
                 int cuadros = 0;
@@ -1355,8 +1355,30 @@ class VisorVM : Form
             {
                 if (s != null) { try { s.Close(); } catch { } if (sockActual == s) sockActual = null; }
             }
+            if (!terminar && AndroidApagado()) { try { BeginInvoke((Action)Apagar); } catch (InvalidOperationException) { } return; }   // ventana ya cerrada (Gemini)
             if (!terminar) Reintentar(1000);
         }
+    }
+
+    // Issue #4 (BeShO-ShO): apagar desde el menú de Android deja la VM en Off sin avisar al Visor, que se quedaba con el último
+    // cuadro reintentando para siempre (y con ayudantes, giro y frecuencia de Android). Si la VM sigue apagada 6 s seguidos (no es
+    // el reinicio de vigilar_arranque.ps1, 1-2 s), se hace lo mismo que el botón Apagar: apagar.ps1 con la VM ya apagada cierra
+    // los ayudantes, devuelve Windows a como estaba, descongela sus programas y cierra este proceso.
+    DateTime apagadaDesde = DateTime.MaxValue; bool vistaEncendida;
+    bool AndroidApagado()
+    {
+        bool apagada = false;
+        try
+        {
+            using (var b = new ManagementObjectSearcher(@"root\virtualization\v2",
+                "SELECT EnabledState FROM Msvm_ComputerSystem WHERE Name='" + vmId.ToString().ToUpperInvariant() + "'"))
+                foreach (ManagementObject o in b.Get()) apagada = Convert.ToUInt16(o["EnabledState"]) == 3;   // 3 = apagada
+        }
+        catch (Exception) { }
+        if (!apagada) { vistaEncendida = true; apagadaDesde = DateTime.MaxValue; return false; }
+        if (!vistaEncendida) return false;   // arranque en frío: el Visor abre antes que Start-VM (congelar, liberar memoria...) (Gemini)
+        if (apagadaDesde == DateTime.MaxValue) apagadaDesde = DateTime.Now;
+        return (DateTime.Now - apagadaDesde).TotalSeconds >= 6;
     }
 
     static Guid BuscarVm(string[] args)

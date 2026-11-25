@@ -71,6 +71,17 @@ rm -f $V/etc/init/android.hardware.sensors-service-multihal.rc $V/etc/vintf/mani
 # Sin funciones de Bluetooth: si no, la pila de BT de Android (sin HAL) cae en bucle y Rescue Party acaba restaurando
 # de fábrica (medido: se perdieron apps instaladas). El BT real irá por el host.
 rm -f $V/etc/permissions/android.hardware.bluetooth.xml $V/etc/permissions/android.hardware.bluetooth_le.xml
+# Auricular (Earpiece) en la política de audio (issue #5 de BeShO-ShO, 25/11): la del emulador solo tenía altavoz y Meet
+# registraba "getAvailableCommunicationDevices: no EARPIECE!" y no arrancaba el audio de la llamada. Sale por la misma salida
+# principal que el altavoz (es el mismo audio de Windows). Se mantiene la etiqueta SELinux del archivo (sed -i la borra).
+P=$V/etc/primary_audio_policy_configuration.xml
+grep -q 'tagName="Earpiece"' $P || {
+  sed -i 's|^        <item>Speaker</item>|&\n        <item>Earpiece</item>|' $P
+  sed -i 's|^        <devicePort tagName="Speaker" type="AUDIO_DEVICE_OUT_SPEAKER" role="sink">|        <devicePort tagName="Earpiece" type="AUDIO_DEVICE_OUT_EARPIECE" role="sink">\n        </devicePort>\n&|' $P
+  sed -i 's|^        <route type="mix" sink="Speaker"|        <route type="mix" sink="Earpiece"\n               sources="primary output"/>\n&|' $P
+}
+[ "$(grep -c 'Earpiece' $P)" = 3 ] || { echo "ERROR: no se pudo añadir el auricular a $P"; exit 1; }
+setfattr -n security.selinux -v u:object_r:vendor_configs_file:s0 $P
 # handheld_core_hardware.xml también la declaraba: con bluetooth_on=1 com.google.android.bluetooth abortaba ~7 veces en
 # cada arranque (hci_ != nullptr, sin HAL; medido 17/11). La radio BT es de Windows; el audio de Android ya sale por él.
 sed -i '/"android.hardware.bluetooth/d' $V/etc/permissions/handheld_core_hardware.xml; grep -c '"android.hardware.bluetooth' $V/etc/permissions/handheld_core_hardware.xml | grep -qx 0

@@ -55,14 +55,15 @@ clave_publica() {   # formato de adb (RSAPublicKey de Android): 64 palabras, n0i
 n = int(sys.stdin.read().split("=")[1], 16); assert n.bit_length() == 2048, "adb exige RSA-2048"
 r = struct.pack("<II", 64, -pow(n, -1, 1 << 32) % (1 << 32)) + n.to_bytes(256, "little") + pow(2, 4096, n).to_bytes(256, "little") + struct.pack("<I", 65537)
 assert len(r) == 524 and struct.unpack_from("<I", r, 4)[0] * n % (1 << 32) == (1 << 32) - 1
-print(base64.b64encode(r).decode() + " surfacedual@armado")'
+print(base64.b64encode(r).decode() + " " + sys.argv[1])' "$2"
 }
 adb_haz() {
   local WA; WA=${SD_ADB_DIR:-$(wslpath -u "$(cd /mnt/c && cmd.exe /d /c 'echo %USERPROFILE%' | tr -d '\r')")/.android}
   [ -d "$(dirname "$WA")" ] || { t "ERROR: no encuentro la carpeta de usuario de Windows ($WA)" "ERROR: the Windows user folder was not found ($WA)"; exit 1; }
   mkdir -p "$WA" /root/.android
-  [ -f "$WA/adbkey" ] || openssl genrsa -out "$WA/adbkey" 2048 2>/dev/null
-  [ -s "$WA/adbkey.pub" ] || clave_publica "$WA/adbkey" > "$WA/adbkey.pub"
+  # Solo la clave que crea Surface Dual lleva "surfacedual@armado" (el desinstalador borra esa y ninguna otra; Codex).
+  local tag=surfacedual@armado; [ -f "$WA/adbkey" ] && tag=surfacedual@suya || openssl genrsa -out "$WA/adbkey" 2048 2>/dev/null
+  [ -s "$WA/adbkey.pub" ] || clave_publica "$WA/adbkey" $tag > "$WA/adbkey.pub"
   install -m 0644 "$WA/adbkey.pub" $PUB
 }
 

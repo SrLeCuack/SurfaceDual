@@ -5,8 +5,8 @@ param([int]$Segundos = 60, [string]$Comandos = '', [int]$Tras = 120)
 $ErrorActionPreference = 'Stop'
 $n = 'SurfaceDualAndroid'; $vhd = Join-Path $PSScriptRoot 'arranque.vhdx'; $tubo = 'surfacedual_android'
 if (Get-VM -Name $n -ErrorAction SilentlyContinue) { Stop-VM -Name $n -TurnOff -Force -ErrorAction SilentlyContinue; Remove-VM -Name $n -Force }
-# Con 16 GB, 6 (como iniciar.ps1, 20/11): la fase 6 del instalador la enciende con esto y con 8 no cabía o congelaba Windows.
-New-VM -Name $n -Generation 2 -MemoryStartupBytes $(if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -ge 24) { 8GB } else { 6GB }) -VHDPath $vhd | Out-Null
+# Con 16 GB, 4 (como iniciar.ps1; 6 desde el 20/11, 4 desde el 25/11, issue #2): la fase 6 del instalador la enciende con esto y con 8 no cabía o congelaba Windows.
+New-VM -Name $n -Generation 2 -MemoryStartupBytes $(if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -ge 24) { 8GB } else { 4GB }) -VHDPath $vhd | Out-Null   # 4 con 16 GB (issue #2, como iniciar.ps1)
 # 8 GB fijos (17/11, antes 12: uso medido 2,9-3,8 GB; decisión del coordinador por delegación del usuario). Memoria dinámica medida: con GPU-PV Hyper-V exige inicio = mínimo y nunca
 # añadió memoria (asignada fija con la "demanda" del invitado en ~190 GB): RutaA/resultados.md.
 Add-VMHardDiskDrive -VMName $n -Path (Join-Path $PSScriptRoot 'android.vhdx')

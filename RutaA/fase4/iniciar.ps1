@@ -30,13 +30,19 @@ switch ($vm.State) {
     # de los programas de Windows que no se usan (pasa a disco; siguen abiertos) y se reintenta; si tampoco, aviso claro.
     $en = (Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue).Idioma -eq 'en'
     function Aviso([string]$es, [string]$ing, [int]$seg) { [void](New-Object -ComObject WScript.Shell).Popup($(if ($en) { $ing } else { $es }), $seg, 'Surface Dual', 64) }
-    $tam = if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -ge 24) { 8, 6 } else { , 6 }
+    # 25/11 (issue #2 de BeShO-ShO, Surface Pro 11 de 16 GB, 2 días de uso): con 6 GB a Windows le quedaban ~60 MB, una llamada
+    # de Meet se congeló y Google Play cayó dentro del controlador D3D12 de Qualcomm (la memoria de la GPU de Android sale de la
+    # RAM de Windows); con 4 GB, sin fallos. Android usa 2,9-3,8 GB (medido 17/11). Así: 4 GB con menos de 24 GB, 8 con 32;
+    # HKCU\Software\SurfaceDual\MemoriaVmGB (número) la fija a mano. Si no cabe, se baja por la escalera 8, 6, 5, 4.
+    $tope = (Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue).MemoriaVmGB -as [int]   # texto u otro tipo: como si no estuviera (Codex)
+    if (-not $tope) { $tope = if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB -ge 24) { 8 } else { 4 } }
+    $tam = @(8, 6, 5, 4 | Where-Object { $_ -le $tope }); if (-not $tam) { $tam = @(4) }
     function Falta { try { (Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory).AvailableMBytes / 1024 -lt $tam[-1] + 0.5 } catch { $true } }
     $frio = Get-Date; $arrancada = $false; $fallo = $null; $memoria = $false
     foreach ($intento in 1, 2) {
       foreach ($gb in $tam) {
         Set-VM -Name $n -MemoryStartupBytes ($gb * 1GB)
-        try { Start-VM -Name $n; $arrancada = $true; break } catch { $fallo = $_ }
+        try { Start-VM -Name $n; $arrancada = $true; Set-ItemProperty 'HKCU:\Software\SurfaceDual' MemoriaActualGB $gb -Type DWord -ErrorAction SilentlyContinue; break } catch { $fallo = $_ }   # para el panel
       }
       $memoria = -not $arrancada -and (Falta)   # otro fallo (no de memoria): ni liberar ni culpar a la memoria (revisión Codex)
       if (-not $memoria -or $intento -eq 2) { break }

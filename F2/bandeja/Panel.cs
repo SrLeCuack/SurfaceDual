@@ -20,6 +20,39 @@ static partial class Bandeja
         foreach (var c in new[] { "AlQuitarTeclado", "AlPonerTeclado" })
             Microsoft.Win32.Registry.SetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", c, "");
     }
+    // Memoria de Android (1.0.18): la misma regla que iniciar.ps1 (MemoriaVmGB a mano; si no, 4 GB con menos de 24 GB y 8 con más).
+    // En equipos de 16 GB el panel deja subirla a 6 avisando de cerrar los programas de Windows (pedido del usuario, issue #2).
+    static readonly double ramGB = RamTotalGB();
+    static double RamTotalGB()
+    {
+        try { using (var s = new System.Management.ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
+                foreach (System.Management.ManagementObject o in s.Get()) return Convert.ToDouble(o["TotalPhysicalMemory"]) / (1L << 30); }
+        catch (Exception) { }
+        return 32;
+    }
+    static bool PocaRam { get { return ramGB < 24; } }
+    static int MemoriaAndroidGB
+    {
+        get { var v = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "MemoriaVmGB", null) as int?; if (v == null || v <= 0) return PocaRam ? 4 : 8; foreach (int t in new[] { 8, 6, 5, 4 }) if (t <= v) return t; return 4; }   // la escalera de iniciar.ps1
+    }
+    // La que tiene ahora (iniciar.ps1 la anota al encender): un cambio pendiente o la escalera por falta de memoria no la mienten (Codex).
+    static int MemoriaEnUsoGB
+    {
+        get { var v = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "MemoriaActualGB", null) as int?; return v ?? MemoriaAndroidGB; }
+    }
+    static void CambiarMemoria(bool mas, IWin32Window dueno)
+    {
+        if (mas && MessageBox.Show(dueno, Idioma.T(
+                "Para darle 6 GB a Android, cierre por completo sus programas de Windows (navegador, Claude, Office…) mientras use Android. Con 16 GB, si la memoria se llena pueden salir pantallas azules.\n\n¿Dar 6 GB a Android?",
+                "To give Android 6 GB, fully close your Windows programs (browser, Claude, Office…) while you use Android. With 16 GB, if memory fills up you may get blue screens.\n\nGive Android 6 GB?"),
+                "Surface Dual", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+        Microsoft.Win32.Registry.SetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "MemoriaVmGB", mas ? 6 : 4);
+        // La memoria de Android se fija al encenderlo (GPU-P: sin memoria dinámica): se aplica la próxima vez que arranque.
+        if (Estado() != EstadoAndroid.Apagado && MessageBox.Show(dueno, Idioma.T(
+                "Se aplica al volver a encender Android. ¿Apagar Android ahora para aplicarlo?",
+                "It applies the next time Android starts. Shut down Android now to apply it?"),
+                "Surface Dual", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) Apagar();
+    }
     static bool AutoApagar
     {
         get { return ((Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SurfaceDual", "AutoApagarMin", 60) as int?) ?? 60) > 0; }
@@ -148,6 +181,15 @@ static partial class Bandeja
             fichas[2].Enabled = Recordado("AlQuitarTeclado") != "" || Recordado("AlPonerTeclado") != "";
             ((Ficha)fichas[2]).Accion = () => { Olvidar(); fichas[2].Enabled = false; };
             y += altoFicha + px(8);
+            Ficha masMemoria = null;
+            if (PocaRam)
+            {
+                masMemoria = new Ficha(this, Idioma.T("Más memoria a Android", "More memory for Android"), "\uE964",
+                    Idioma.T("Dar 6 GB a Android en vez de 4 (cierre sus programas de Windows)", "Give Android 6 GB instead of 4 (close your Windows programs)"),
+                    // El aviso quitaría el foco y cerraría el panel debajo (Gemini): se cierra antes y el aviso va sin dueño.
+                    () => MemoriaAndroidGB >= 6, v => BeginInvoke((Action)(() => { Close(); CambiarMemoria(v, null); }))) { Bounds = new Rectangle(m, y, anchoFicha, altoFicha) };
+                y += altoFicha + px(8);
+            }
             brillo = new Deslizador(this) { Bounds = new Rectangle(m - px(4), y, interior + px(8), px(44)), Visible = false };
             y += px(44) + px(12);
             yPie = y;
@@ -155,7 +197,7 @@ static partial class Bandeja
             memoria = new Etiqueta(this) { Bounds = new Rectangle(m, y, interior - wa, px(60)) };
             apagar = new Boton(this, Idioma.T("Apagar Android", "Shut down Android"), "\uE7E8") { Bounds = new Rectangle(ancho - m - wa + px(8), y + px(8), wa, px(44)), Enabled = false };
             apagar.Accion = () => { Apagar(); principal.Subtitulo = Idioma.T("Apagando…", "Shutting down…"); apagar.Enabled = false; };
-            Controls.Add(principal); Controls.AddRange(fichas); Controls.Add(brillo); Controls.Add(memoria); Controls.Add(apagar);
+            Controls.Add(principal); Controls.AddRange(fichas); if (masMemoria != null) Controls.Add(masMemoria); Controls.Add(brillo); Controls.Add(memoria); Controls.Add(apagar);
 
             // Encima de la barra de tareas, a la derecha y a 12 del borde, en la pantalla donde está el puntero (como Win+A).
             var zona = Screen.FromPoint(Cursor.Position);
@@ -210,7 +252,7 @@ static partial class Bandeja
                                 : est == EstadoAndroid.Suspendido ? Idioma.T("Listo · en pausa", "Ready · paused")
                                 : est == EstadoAndroid.Encendiendo ? Idioma.T("Encendiendo…", "Starting…")
                                 : Idioma.T("Apagado · tarda unos 35 s", "Off · takes about 35 s");
-            memoria.Text = est == EstadoAndroid.Apagado ? Idioma.T("Android no usa memoria", "Android uses no memory") : Idioma.T("Android usa 12 GB", "Android uses 12 GB");
+            memoria.Text = est == EstadoAndroid.Apagado ? Idioma.T("Android no usa memoria", "Android uses no memory") : Idioma.T("Android usa " + MemoriaEnUsoGB + " GB", "Android uses " + MemoriaEnUsoGB + " GB");
             apagar.Enabled = est != EstadoAndroid.Apagado;
             if (b >= 0) { brillo.Nivel = b; brillo.Visible = true; }
             memoria.Invalidate();

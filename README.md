@@ -25,6 +25,9 @@ It is an alternative to Windows Subsystem for Android (WSA), which Microsoft dis
   and Circle to Search.
 - **Trackpad gestures with the keyboard attached:** three fingers down shows the Windows desktop and Android audio keeps
   playing; three fingers sideways switches between Android and Windows.
+- **Touch gesture with the keyboard detached:** hold three fingers still on the screen for about 0.7 s to switch between
+  Windows and Android, both ways (idea and first version by BeShO-ShO). `HKCU\Software\SurfaceDual`: `GestoDedos` (3, or 0 to
+  turn it off) and `GestoMs` (700).
 - **Watched boot:** if Android hangs while starting, it restarts by itself.
 - **Production build:** Android is not debuggable; only your own PC can connect to Android, with its key.
 
@@ -41,14 +44,18 @@ In this reading test, Android used **38 % less** power than Edge on Windows. You
 
 - An **ARM64 device with a Qualcomm Snapdragon X** chip (Adreno GPU) running **Windows 11**. Only tested on a Surface Pro 11.
   **It does not work on Intel or AMD (x86/x64) PCs:** the installer checks this first and stops without changing anything.
-- **16 GB of RAM** (Android takes 6 GB while it is on with 16 GB, 8 GB with 32 GB) and **64 GB of free disk space**.
+- **16 GB of RAM** (Android takes 4 GB while it is on with 16 GB, 8 GB with 32 GB; `MemoriaVmGB` in `HKCU\Software\SurfaceDual` sets it by hand) and **64 GB of free disk space**.
   **With 16 GB, memory is tight.** Some testers with 16 GB had blue screens (error 0x139 in `dxgmms2.sys`, the Windows graphics
   memory manager) while using Android with memory almost full. That's why, on PCs with less than 24 GB, Surface Dual **freezes
   your Windows apps and frees their memory while Android is on screen** (browsers, Claude, Codex, Office, Teams, Discord,
   Spotify…, even if they live in the tray), and unfreezes them exactly as they were when you go back to Windows. If other
   virtual machines are running (Claude Cowork, WSL, Docker), it asks you to close them, because they can't be paused safely.
-  This is meant to prevent those blue screens, but it hasn't been confirmed on a 16 GB Surface yet. For the most stable
-  experience, close heavy apps and other virtual machines before opening Android. With 32 GB none of this is needed.
+  Since 1.0.18 Android also gets **4 GB instead of 6** on these PCs: a tester with a 16 GB Surface (BeShO-ShO) saw Windows
+  drop to about 60 MB free with 6 GB, and two days without problems with 4. The price: Android reloads some apps when you
+  switch back to them. If you prefer 6 GB, turn on **More memory for Android** in the tray's quick panel (only shown on these
+  PCs) and fully close your Windows programs while you use Android; it applies the next time Android starts.
+  For the most stable experience, close heavy apps and other virtual machines before opening Android. With 32 GB none of
+  this is needed.
 - A Windows **administrator** account and an Internet connection: about 2.2 GB of Android is downloaded, plus Ubuntu and tools.
 - Hyper-V. On Windows 11 **Home** the installer enables it **experimentally**, and only if you type `SI` to confirm.
 
@@ -85,6 +92,12 @@ including the crash file; send that one privately. Open a GitHub Issue (or send 
 - YouTube goes up to 1080p60. Netflix does not work ([why](#why-netflix-does-not-work)).
 - Android alarms do not ring while you are in Windows, because Android is paused.
 - With the trackpad gestures, Android is not paused until you go back to it.
+- Bluetooth is off inside Android (Windows keeps the radio; Android's sound already goes through Windows). Because of that,
+  three Settings screens close by themselves: Connected devices, Sound & vibration, and Help & feedback (reported by
+  BeShO-ShO). All the other Settings screens work.
+- **Google Meet: use it in Chrome inside Android**, where sound and microphone work. In the Meet app, calls connect but
+  have no sound: the app doesn't start its audio on this device. The missing earpiece it asked for was added in 1.0.18,
+  but that alone isn't enough (reported by BeShO-ShO).
 
 ### Why Netflix does not work
 
