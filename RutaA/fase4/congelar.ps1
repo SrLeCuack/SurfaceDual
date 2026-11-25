@@ -37,7 +37,11 @@ try {
     'conhost', 'OpenConsole', 'WindowsTerminal', 'powershell', 'pwsh', 'cmd', 'msedgewebview2',
     'svchost', 'dllhost', 'rundll32', 'RuntimeBroker', 'backgroundTaskHost', 'taskhostw', 'audiodg', 'fontdrvhost'   # compartidos (Gemini)
   $enSesion = Get-Process | Where-Object { $_.SessionId -eq $ses -and $_.Id -notin $ancestros }
-  $nombres = $enSesion | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.ProcessName -notin $no -and $_.ProcessName -notlike 'Hv*' } |
+  # Además, por su nombre aunque no tengan ventana (en la bandeja o en una terminal), los que más memoria suelen gastar (1.0.17,
+  # lista del usuario): IA, navegadores, Office, edición y chat.
+  $pesados = 'claude', 'Codex', 'Antigravity', 'chrome', 'msedge', 'firefox', 'brave', 'opera', 'vivaldi', 'WINWORD', 'EXCEL',
+    'POWERPNT', 'ONENOTE', 'Teams', 'ms-teams', 'Discord', 'Spotify', 'slack', 'Code', 'Photoshop', 'Notion', 'Figma'
+  $nombres = $enSesion | Where-Object { ($_.MainWindowHandle -ne [IntPtr]::Zero -or $_.ProcessName -in $pesados) -and $_.ProcessName -notin $no -and $_.ProcessName -notlike 'Hv*' } |
     Select-Object -ExpandProperty ProcessName -Unique
   $n = 0
   foreach ($p in $enSesion | Where-Object { $_.ProcessName -in $nombres }) {
@@ -50,5 +54,27 @@ try {
   foreach ($p in $enSesion | Where-Object { $_.ProcessName -notin 'VisorVM', 'dwm', 'csrss', 'winlogon' -and $_.ProcessName -notlike 'Hv*' }) {
     try { [void][SD.Hielo]::EmptyWorkingSet($p.Handle) } catch { }
   }
-  "congelados: $n procesos de $(@($nombres).Count) programas ($($nombres -join ', '))"
+  # Otras máquinas virtuales encendidas (WSL, Docker, el Cowork de Claude...): no se pueden congelar sin riesgo de que pierdan
+  # lo que hacen, y con 16 GB son lo que más memoria gasta. Aviso, una vez mientras sigan las mismas (hcsdiag: VM, estado, id, dueño).
+  # La de Android por su Id (CIM: más rápido que cargar el módulo Hyper-V, Gemini).
+  $mia = "$((Get-CimInstance -Namespace root\virtualization\v2 -ClassName Msvm_ComputerSystem -Filter "ElementName='SurfaceDualAndroid'" -ErrorAction SilentlyContinue).Name)"
+  $otras = foreach ($l in & hcsdiag.exe list 2>$null) {
+    if ($l -match '^\s*VM,\s*Running,\s*(\S+),\s*(\S.*)$' -and $Matches[1] -ne $mia) {
+      [pscustomobject]@{ Id = $Matches[1]; Nombre = switch ($Matches[2].Trim()) { 'WSL' { 'Linux (WSL) / Docker' } 'VMMS' { 'Hyper-V' } default { $_ } } }
+    }
+  }
+  $clave = (@($otras).Id | Sort-Object) -join ','   # por Id: otra VM del mismo tipo también avisa (Codex)
+  $clave_nombres = (@($otras).Nombre | Sort-Object -Unique) -join ', '
+  $marca = Join-Path $env:TEMP 'surfacedual_aviso_vm.txt'
+  if (-not $clave) { Remove-Item $marca -ErrorAction SilentlyContinue }
+  elseif ($clave -ne (Get-Content $marca -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    Set-Content $marca $clave -Encoding utf8
+    $en = (Get-ItemProperty 'HKCU:\Software\SurfaceDual' -ErrorAction SilentlyContinue).Idioma -eq 'en'
+    $t = if ($en) { "Other virtual machines are running on this PC: $clave_nombres. They use a lot of memory and can't be paused safely. With 16 GB, close them so Android runs stable (for example, quit Claude from its icon next to the clock, close Docker, or run wsl --shutdown)." }
+         else { "En este equipo hay otras máquinas virtuales encendidas: $clave_nombres. Gastan mucha memoria y no se pueden pausar sin riesgo. Con 16 GB, ciérralas para que Android vaya estable (por ejemplo, sal de Claude desde su icono junto al reloj, cierra Docker o usa wsl --shutdown)." }
+    # Aparte (no frena la vuelta a Android) y por encima del Visor (0x40000 = siempre encima); se cierra solo a los 20 s.
+    $cmd = "[void](New-Object -ComObject WScript.Shell).Popup('$($t -replace "'", "''")', 20, 'Surface Dual', $(48 + 0x40000))"
+    Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile', '-EncodedCommand', ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cmd)))   # comillas seguras (Gemini)
+  }
+  "congelados: $n procesos de $(@($nombres).Count) programas ($($nombres -join ', ')); otras VM: $clave_nombres"
 } finally { if ($tengo) { $mutex.ReleaseMutex() } }
