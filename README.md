@@ -42,6 +42,13 @@ In this reading test, Android used **38 % less** power than Edge on Windows. You
 - An **ARM64 device with a Qualcomm Snapdragon X** chip (Adreno GPU) running **Windows 11**. Only tested on a Surface Pro 11.
   **It does not work on Intel or AMD (x86/x64) PCs:** the installer checks this first and stops without changing anything.
 - **16 GB of RAM** (Android takes 6 GB while it is on with 16 GB, 8 GB with 32 GB) and **64 GB of free disk space**.
+  **With 16 GB, memory is tight.** Some testers with 16 GB had blue screens (error 0x139 in `dxgmms2.sys`, the Windows graphics
+  memory manager) while using Android with memory almost full. That's why, on PCs with less than 24 GB, Surface Dual **freezes
+  your Windows apps and frees their memory while Android is on screen** (browsers, Claude, Codex, Office, Teams, Discord,
+  Spotify…, even if they live in the tray), and unfreezes them exactly as they were when you go back to Windows. If other
+  virtual machines are running (Claude Cowork, WSL, Docker), it asks you to close them, because they can't be paused safely.
+  This is meant to prevent those blue screens, but it hasn't been confirmed on a 16 GB Surface yet. For the most stable
+  experience, close heavy apps and other virtual machines before opening Android. With 32 GB none of this is needed.
 - A Windows **administrator** account and an Internet connection: about 2.2 GB of Android is downloaded, plus Ubuntu and tools.
 - Hyper-V. On Windows 11 **Home** the installer enables it **experimentally**, and only if you type `SI` to confirm.
 
